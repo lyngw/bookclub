@@ -144,7 +144,7 @@
       margin-bottom: 0.3rem;
       color: #6b7280;
     }
-    .log-section {
+    .log-mainline {
       font-size: 0.85rem;
       font-weight: 600;
       color: #111827;
@@ -224,8 +224,8 @@
 
   <script>
     // ✅ 1) 여기에 서재 Supabase 프로젝트 정보만 채워 넣으면 됩니다.
-    const SUPABASE_URL = "https://mpmjjkosxhnffwymspru.supabase.co";      // TODO: 교체
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wbWpqa29zeGhuZmZ3eW1zcHJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDQwMDIsImV4cCI6MjA4MDcyMDAwMn0.MAauyc4e459U6YVh4TTSL3PF1HO-mQGb4ujHEKKfqjY";                // TODO: 교체
+    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";      // TODO: 교체
+    const SUPABASE_ANON_KEY = "YOUR_ANON_PUBLIC_KEY";                // TODO: 교체
     const CURRENT_BOOK_TITLE = "Lessons from the Titans";
 
     const { createClient } = window.supabase;
@@ -390,12 +390,19 @@
           <div class="subtitle">최근 일주일 동안의 내 독서 기록을 모아봤어요.</div>
           <div id="logsList" class="logs-list"></div>
         </section>
+
+        <section class="card" id="clubCard">
+          <h2>클럽의 최근 기록</h2>
+          <div class="subtitle">멤버들이 남긴 최근 기록 20개를 함께 살펴봐요.</div>
+          <div id="clubLogsList" class="logs-list"></div>
+        </section>
       `;
 
       document.getElementById("dateInput").value = todayISO();
       document.getElementById("saveTodayBtn").onclick = () => saveTodayLog(user);
       loadTodayLog(user);
       loadRecentLogs(user);
+      loadClubRecentLogs();
     }
 
     async function loadTodayLog(user) {
@@ -442,7 +449,6 @@
         reflection
       };
 
-      // upsert: 같은 (user_id, date, book_title)이면 업데이트, 아니면 새로 삽입
       const { error } = await supabase
         .from("reading_logs")
         .upsert(payload, {
@@ -455,6 +461,7 @@
       } else {
         statusEl.textContent = "오늘의 기록이 저장되었습니다.";
         loadRecentLogs(user);
+        loadClubRecentLogs();
       }
     }
 
@@ -502,9 +509,65 @@
             <span>${formatDate(row.date)} · ${CURRENT_BOOK_TITLE}</span>
             <span class="pill">${row.section || "범위 미기입"}</span>
           </div>
-          <div class="log-section">${row.key_points || ""}</div>
+          <div class="log-mainline">${row.key_points || ""}</div>
           ${row.quote ? `<div class="log-quote"><span class="muted">오늘의 한 문장</span><br>${row.quote}</div>` : ""}
         `;
+        div.title = row.reflection || "";
+        listEl.appendChild(div);
+      });
+    }
+
+    async function loadClubRecentLogs() {
+      const listEl = document.getElementById("clubLogsList");
+      if (!listEl) return;
+
+      // 1) 전체 프로필 불러오기 (id, display_name)
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, display_name");
+      if (profileError) {
+        console.error("프로필 불러오기 오류:", profileError);
+      }
+      const nameMap = {};
+      if (profiles) {
+        profiles.forEach(p => {
+          nameMap[p.id] = p.display_name || "";
+        });
+      }
+
+      // 2) 클럽 전체의 최근 기록 불러오기
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("book_title", CURRENT_BOOK_TITLE)
+        .order("date", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("클럽 기록 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">클럽 기록을 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="muted">아직 저장된 클럽 기록이 없습니다.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "log-item";
+        const displayName = nameMap[row.user_id] || "익명 멤버";
+        div.innerHTML = `
+          <div class="log-head">
+            <span>${formatDate(row.date)} · ${displayName}</span>
+            <span class="pill">${row.section || "범위 미기입"}</span>
+          </div>
+          <div class="log-mainline">${row.key_points || ""}</div>
+          ${row.quote ? `<div class="log-quote"><span class="muted">오늘의 한 문장</span><br>${row.quote}</div>` : ""}
+        `;
+        div.title = row.reflection || "";
         listEl.appendChild(div);
       });
     }
