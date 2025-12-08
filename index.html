@@ -224,8 +224,8 @@
 
   <script>
     // ✅ 1) 여기에 서재 Supabase 프로젝트 정보만 채워 넣으면 됩니다.
-    const SUPABASE_URL = "https://mpmjjkosxhnffwymspru.supabase.co";      // TODO: 교체
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wbWpqa29zeGhuZmZ3eW1zcHJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDQwMDIsImV4cCI6MjA4MDcyMDAwMn0.MAauyc4e459U6YVh4TTSL3PF1HO-mQGb4ujHEKKfqjY";                // TODO: 교체
+    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";      // TODO: 교체
+    const SUPABASE_ANON_KEY = "YOUR_ANON_PUBLIC_KEY";                // TODO: 교체
     const CURRENT_BOOK_TITLE = "Lessons from the Titans";
 
     const { createClient } = window.supabase;
@@ -350,7 +350,7 @@
 
       userArea.innerHTML = `
         <div class="user-chip">
-          <span>${displayName}</span>
+          <span id="headerDisplayName">${displayName}</span>
           <button id="logoutBtn">로그아웃</button>
         </div>
       `;
@@ -360,6 +360,15 @@
       };
 
       root.innerHTML = `
+        <section class="card" id="profileCard">
+          <h2>내 프로필</h2>
+          <div class="subtitle">클럽에서 보이는 이름(닉네임)을 바꿀 수 있어요.</div>
+          <label>현재 닉네임</label>
+          <input id="nicknameInput" type="text" />
+          <button class="primary" id="saveNicknameBtn">닉네임 저장</button>
+          <div class="muted" id="nicknameStatus"></div>
+        </section>
+
         <section class="card" id="todayCard">
           <h2>오늘의 독서 기록</h2>
           <div class="subtitle">
@@ -398,11 +407,45 @@
         </section>
       `;
 
+      // 닉네임 입력창에 현재 닉네임 세팅
+      document.getElementById("nicknameInput").value = displayName;
+      document.getElementById("saveNicknameBtn").onclick = () => saveNickname(user);
+
       document.getElementById("dateInput").value = todayISO();
       document.getElementById("saveTodayBtn").onclick = () => saveTodayLog(user);
       loadTodayLog(user);
       loadRecentLogs(user);
       loadClubRecentLogs();
+    }
+
+    async function saveNickname(user) {
+      const input = document.getElementById("nicknameInput");
+      const statusEl = document.getElementById("nicknameStatus");
+      const headerName = document.getElementById("headerDisplayName");
+      const newName = (input.value || "").trim();
+
+      if (!newName) {
+        statusEl.textContent = "닉네임을 비울 수는 없습니다.";
+        return;
+      }
+
+      // profiles에 id=user.id 로 upsert
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          display_name: newName
+        }, { onConflict: "id" });
+
+      if (error) {
+        console.error("닉네임 저장 오류:", error);
+        statusEl.textContent = "닉네임 저장 중 오류가 발생했습니다.";
+      } else {
+        statusEl.textContent = "닉네임이 저장되었습니다.";
+        if (headerName) headerName.textContent = newName;
+        // 클럽 기록 카드도 새 이름 반영되게 다시 로딩
+        loadClubRecentLogs();
+      }
     }
 
     async function loadTodayLog(user) {
