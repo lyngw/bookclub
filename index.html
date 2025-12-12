@@ -596,6 +596,7 @@
       if (error) {
         console.error("닉네임 저장 오류:", error);
         statusEl.textContent = "닉네임 저장 중 오류가 발생했습니다.";
+        alert(`[reading_logs SELECT] ${error.message}\n${error.details || ""}`);
       } else {
         statusEl.textContent = "닉네임이 저장되었습니다.";
         if (headerName) headerName.textContent = escapeHTML(newName);
