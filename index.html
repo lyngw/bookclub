@@ -380,6 +380,16 @@
       const goLogin = document.getElementById("goLogin");
       if (goSignup) goSignup.onclick = () => renderLogin("signup");
       if (goLogin) goLogin.onclick = () => renderLogin("login");
+
+      const kakaoBtn = document.getElementById("kakaoLoginBtn");
+      if (kakaoBtn) {
+        kakaoBtn.onclick = async () => {
+          await supabase.auth.signInWithOAuth({
+            provider: "kakao",
+            options: { redirectTo: window.location.origin }
+          });
+        };
+      }
     }
 
     async function handleAuth(mode) {
