@@ -783,7 +783,24 @@
         listEl.appendChild(div);
       });
     }
+    function resetCaseForm() {
+        const ids = [
+          "caseCompanyInput",
+          "caseSectionInput",
+          "caseSummaryInput",
+          "caseGoodInput",
+          "caseBadInput",
+          "caseLessonInput",
+          "caseActionInput"
+        ];
 
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = "";
+        });
+    }
+
+    
     async function saveCase(user) {
       const company = document.getElementById("caseCompanyInput").value.trim();
       const section = document.getElementById("caseSectionInput").value.trim();
@@ -816,19 +833,10 @@
       if (error) {
         console.error("케이스 저장 오류:", error);
         statusEl.textContent = "케이스 저장 중 오류가 발생했습니다.";
-      } else {
+         } else {
         statusEl.textContent = "케이스 분석이 저장되었습니다.";
-
-        // ✅ 입력칸 초기화
-          document.getElementById("caseCompanyInput").value = "";
-          document.getElementById("caseSectionInput").value = "";
-          document.getElementById("caseSummaryInput").value = "";
-          document.getElementById("caseGoodInput").value = "";
-          document.getElementById("caseBadInput").value = "";
-          document.getElementById("caseLessonInput").value = "";
-          document.getElementById("caseActionInput").value = "";
-
-          loadCaseList(user);
+        resetCaseForm();      // ✅ 저장 후 입력칸 초기화
+        loadCaseList(user);   // ✅ 목록 갱신
         }
       }
 
