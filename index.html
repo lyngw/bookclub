@@ -820,17 +820,17 @@
         statusEl.textContent = "케이스 분석이 저장되었습니다.";
 
         // ✅ 입력칸 초기화
-        document.getElementById("caseCompanyInput").value = "";
+          document.getElementById("caseCompanyInput").value = "";
           document.getElementById("caseSectionInput").value = "";
-  document.getElementById("caseSummaryInput").value = "";
-  document.getElementById("caseGoodInput").value = "";
-  document.getElementById("caseBadInput").value = "";
-  document.getElementById("caseLessonInput").value = "";
-  document.getElementById("caseActionInput").value = "";
+          document.getElementById("caseSummaryInput").value = "";
+          document.getElementById("caseGoodInput").value = "";
+          document.getElementById("caseBadInput").value = "";
+          document.getElementById("caseLessonInput").value = "";
+          document.getElementById("caseActionInput").value = "";
 
-  loadCaseList(user);
-}
-    }
+          loadCaseList(user);
+        }
+      }
 
     async function loadCaseList(user) {
       const listEl = document.getElementById("caseList");
