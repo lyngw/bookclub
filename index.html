@@ -684,7 +684,7 @@
         // (선택) “저장된 값”을 다시 불러오고 싶으면 아래를 쓰고,
         // 입력칸 비우기를 원하면 이 줄은 빼면 돼.
         // loadTodayLog(user);
-}
+    }
     }
 
     function formatDate(iso) {
@@ -786,21 +786,19 @@
       });
     }
     function resetCaseForm() {
-        const ids = [
-          "caseCompanyInput",
-          "caseSectionInput",
-          "caseSummaryInput",
-          "caseGoodInput",
-          "caseBadInput",
-          "caseLessonInput",
-          "caseActionInput"
-        ];
+      editingCaseId = null;
 
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = "";
-        });
-    }
+      document.getElementById("caseCompanyInput").value = "";
+      document.getElementById("caseSectionInput").value = "";
+      document.getElementById("caseSummaryInput").value = "";
+      document.getElementById("caseGoodInput").value = "";
+      document.getElementById("caseBadInput").value = "";
+      document.getElementById("caseLessonInput").value = "";
+      document.getElementById("caseActionInput").value = "";
+
+      const statusEl = document.getElementById("caseStatus");
+      if (statusEl) statusEl.textContent = "";
+}
 
     
     async function saveCase(user) {
