@@ -74,6 +74,7 @@
     const SUPABASE_URL = "https://mpmjjkosxhnffwymspru.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wbWpqa29zeGhuZmZ3eW1zcHJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNDQwMDIsImV4cCI6MjA4MDcyMDAwMn0.MAauyc4e459U6YVh4TTSL3PF1HO-mQGb4ujHEKKfqjY";
     const SITE_URL = "https://lyngw.github.io/bookclub/";
+    const REDIRECT_TO = "https://lyngw.github.io/bookclub/"; // ✅ 카카오 OAuth 콜백용
 
     const DEFAULT_BOOK_TITLE = "Lessons from the Titans";
     const ADMIN_EMAILS = ["lyngw@naver.com"];
@@ -95,6 +96,38 @@
     async function getSession() {
       const { data } = await supabase.auth.getSession();
       return data.session;
+    }
+
+    async function ensureProfile(user) {
+      // 카카오/이메일 어떤 로그인 방식이든 profiles 레코드가 없으면 만들어줌
+      // (카카오 메타데이터 키는 환경마다 nickname/name이 다를 수 있어 fallback 처리)
+      const meta = user.user_metadata || {};
+      const fallbackName =
+        meta.nickname ||
+        meta.name ||
+        meta.full_name ||
+        meta.preferred_username ||"멤버";
+
+      await supabase
+        .from("profiles")
+        .upsert(
+          { id: user.id, display_name: fallbackName },
+          { onConflict: "id" }
+        );
+  }
+
+    async function getMyProfile(user) {
+    // profiles에서 display_name, role 읽기
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("display_name, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("프로필 로딩 오류:", error);
+      }
+      return data || null;
     }
 
     async function loadClubSettings() {
@@ -133,6 +166,7 @@
           <h2>카카오로 로그인</h2>
           <div class="subtitle">이메일/비밀번호 로그인 없이, 카카오 계정으로만 접속합니다.</div>
           <button class="kakao-btn" id="kakaoLoginBtn">카카오로 로그인</button>
+          <button class="primary" id="kakaoLoginBtn" style="margin-top:0.5rem; background:#FEE500; color:#000;">카카오로 로그인</button>
           <div class="muted" style="margin-top:0.6rem;">
             오류가 나면 Supabase Auth URL 설정과 Kakao Redirect URI가 SITE_URL과 일치하는지 확인해 주세요.
           </div>
@@ -145,6 +179,15 @@
           options: { redirectTo: SITE_URL }
         });
       };
+      const kakaoBtn = document.getElementById("kakaoLoginBtn");
+      if (kakaoBtn) {
+        kakaoBtn.onclick = async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: "kakao",
+        options: { redirectTo: REDIRECT_TO }
+    });
+  };
+}
     }
 
     function setupTabs() {
@@ -177,12 +220,15 @@
       const userArea = document.getElementById("userArea");
       const root = document.getElementById("content");
 
+      // 카카오 로그인 유저도 profiles가 자동 생성되도록
       await ensureProfile(user);
 
-      const userEmail = user.email || user.user_metadata?.email || "";
-      const isAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
+      // 내 프로필(role 포함) 읽기
+      const myProfile = await getMyProfile(user);
+      const isAdmin = (myProfile?.role === "admin");
 
-      let displayName = userEmail || "멤버";
+      let displayName = myProfile?.display_name || user.email || "멤버";
+
       const { data: profileRow } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
       if (profileRow?.display_name) displayName = profileRow.display_name;
 
