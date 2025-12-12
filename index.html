@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>내곁에북클럽 – Daily Reading Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Supabase JS v2 -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+      background: #f5f5f7;
+      color: #111827;
+    }
+    .app-shell {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+      box-sizing: border-box;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.2rem;
+    }
+    .logo {
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    .logo span {
+      font-weight: 400;
+      font-size: 0.8rem;
+      color: #6b7280;
+      display: block;
+    }
+    .user-chip {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      background: #111827;
+      color: #f9fafb;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .user-chip button {
+      background: transparent;
+      border: none;
+      color: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.9rem;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+      border: 1px solid #e5e7eb;
+    }
+    h2 {
+      font-size: 1rem;
+      margin: 0 0 0.4rem;
+    }
+    .subtitle {
+      font-size: 0.82rem;
+      color: #6b7280;
+      margin-bottom: 0.7rem;
+    }
+    label {
+      font-size: 0.8rem;
+      display: block;
+      margin: 0.5rem 0 0.15rem;
+      color: #374151;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: #f9fafb;
+    }
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .row > div {
+      flex: 1 1 180px;
+    }
+    button.primary {
+      margin-top: 0.9rem;
+      width: 100%;
+      border-radius: 999px;
+      border: none;
+      padding: 0.6rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: #111827;
+      color: #f9fafb;
+      cursor: pointer;
+    }
+    button.primary:active {
+      opacity: 0.85;
+    }
+    .muted {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    .logs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-top: 0.3rem;
+    }
+    .log-item {
+      padding: 0.6rem 0.7rem;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    .log-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      margin-bottom: 0.3rem;
+      color: #6b7280;
+    }
+    .log-mainline {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .log-quote {
+      margin-top: 0.2rem;
+      font-size: 0.85rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.05rem 0.5rem;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 0.75rem;
+    }
+    .login-toggle {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      margin-top: 0.4rem;
+    }
+    .login-toggle button {
+      border: none;
+      background: none;
+      color: #4f46e5;
+      cursor: pointer;
+      padding: 0;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #020617;
+        color: #e5e7eb;
+      }
+      .card {
+        background: #020617;
+        border-color: #1f2937;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.7);
+      }
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      textarea {
+        background: #020617;
+        border-color: #1f2937;
+        color: #e5e7eb;
+      }
+      .log-item {
+        background: #020617;
+        border-color: #1f2937;
+      }
+      .user-chip {
+        background: #e5e7eb;
+        color: #020617;
+      }
+      button.primary {
+        background: #e5e7eb;
+        color: #020617;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="logo">
+        내곁에북클럽
+        <span>Lessons from the Titans · Daily Reading</span>
+      </div>
+      <div id="userArea"></div>
+    </header>
+
+    <main id="content"></main>
+  </div>
+
+  <script>
+    // ✅ 1) 여기에 서재 Supabase 프로젝트 정보만 채워 넣으면 됩니다.
+    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";      // TODO: 교체
+    const SUPABASE_ANON_KEY = "YOUR_ANON_PUBLIC_KEY";                // TODO: 교체
+    const CURRENT_BOOK_TITLE = "Lessons from the Titans";
+
+    const { createClient } = window.supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 유틸: 오늘 날짜 문자열 (YYYY-MM-DD)
+    function todayISO() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    async function getSession() {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    }
+
+    function renderLogin(mode) {
+      const root = document.getElementById("content");
+      const userArea = document.getElementById("userArea");
+      userArea.innerHTML = "";
+
+      const isLogin = mode !== "signup";
+
+      root.innerHTML = `
+        <section class="card">
+          <h2>${isLogin ? "로그인" : "회원가입"}</h2>
+          <div class="subtitle">
+            내곁에북클럽 계정으로 ${isLogin ? "접속해 오늘의 독서 기록을 남겨보세요." : "가입 후 매일 읽은 내용을 기록할 수 있어요."}
+          </div>
+          <label for="email">이메일</label>
+          <input id="email" type="email" placeholder="you@example.com" />
+          <label for="password">비밀번호</label>
+          <input id="password" type="password" placeholder="6자 이상" />
+          ${isLogin ? "" : `
+          <label for="displayName">이름 / 닉네임</label>
+          <input id="displayName" type="text" placeholder="내곁에서재" />
+          `}
+          <button class="primary" id="submitAuthBtn">${isLogin ? "로그인" : "회원가입"}</button>
+          <div class="login-toggle">
+            ${isLogin
+              ? `<span class="muted">아직 계정이 없나요?</span><button id="goSignup">회원가입</button>`
+              : `<span class="muted">이미 계정이 있나요?</span><button id="goLogin">로그인</button>`
+            }
+          </div>
+        </section>
+      `;
+
+      document.getElementById("submitAuthBtn").onclick = () => handleAuth(isLogin ? "login" : "signup");
+      const goSignup = document.getElementById("goSignup");
+      const goLogin = document.getElementById("goLogin");
+      if (goSignup) goSignup.onclick = () => renderLogin("signup");
+      if (goLogin) goLogin.onclick = () => renderLogin("login");
+    }
+
+    async function handleAuth(mode) {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (!email || !password) {
+        alert("이메일과 비밀번호를 입력해 주세요.");
+        return;
+      }
+
+      if (mode === "signup") {
+        const displayName = document.getElementById("displayName").value.trim();
+        if (!displayName) {
+          alert("이름 또는 닉네임도 입력해 주세요.");
+          return;
+        }
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password
+        });
+        if (error) {
+          alert("회원가입 실패: " + error.message);
+          return;
+        }
+        const user = data.user;
+        if (user) {
+          await supabase.from("profiles").insert({
+            id: user.id,
+            display_name: displayName
+          }).catch(() => {});
+        }
+        alert("회원가입이 완료되었습니다. 다시 로그인해 주세요.");
+        renderLogin("login");
+        return;
+      }
+
+      if (mode === "login") {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        if (error) {
+          alert("로그인 실패: " + error.message);
+          return;
+        }
+        const session = data.session;
+        renderApp(session.user);
+      }
+    }
+
+    async function renderApp(user) {
+      const userArea = document.getElementById("userArea");
+      const root = document.getElementById("content");
+
+      // 프로필 불러오기
+      let displayName = "";
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileRows && profileRows.display_name) {
+        displayName = profileRows.display_name;
+      } else {
+        displayName = user.email;
+      }
+
+      userArea.innerHTML = `
+        <div class="user-chip">
+          <span id="headerDisplayName">${displayName}</span>
+          <button id="logoutBtn">로그아웃</button>
+        </div>
+      `;
+      document.getElementById("logoutBtn").onclick = async () => {
+        await supabase.auth.signOut();
+        renderLogin("login");
+      };
+
+      root.innerHTML = `
+        <section class="card" id="profileCard">
+          <h2>내 프로필</h2>
+          <div class="subtitle">클럽에서 보이는 이름(닉네임)을 바꿀 수 있어요.</div>
+          <label>현재 닉네임</label>
+          <input id="nicknameInput" type="text" />
+          <button class="primary" id="saveNicknameBtn">닉네임 저장</button>
+          <div class="muted" id="nicknameStatus"></div>
+        </section>
+
+        <section class="card" id="todayCard">
+          <h2>오늘의 독서 기록</h2>
+          <div class="subtitle">
+            오늘 ${CURRENT_BOOK_TITLE}에서 읽은 내용을 정리해 보세요. (자동으로 오늘 날짜로 저장됩니다.)
+          </div>
+          <div class="row">
+            <div>
+              <label>읽은 범위 (챕터 / 페이지)</label>
+              <input id="sectionInput" type="text" placeholder="예: Chapter 3 · p.45–70" />
+            </div>
+            <div>
+              <label>날짜</label>
+              <input id="dateInput" type="text" disabled />
+            </div>
+          </div>
+          <label>오늘의 핵심 포인트</label>
+          <textarea id="keyPointsInput" placeholder="핵심 문장 2~3줄로 요약해 보세요."></textarea>
+          <label>오늘의 한 문장 (인상 깊었던 문장)</label>
+          <textarea id="quoteInput" placeholder="원문 그대로 옮겨 적어도, 요약해 적어도 좋아요."></textarea>
+          <label>느낀 점 / 적용 아이디어</label>
+          <textarea id="reflectionInput" placeholder="오늘 이 기업 사례에서 내가 배운 점, 나의 삶/일에 적용할 부분을 적어보세요."></textarea>
+          <button class="primary" id="saveTodayBtn">오늘 기록 저장</button>
+          <div class="muted" id="saveStatus"></div>
+        </section>
+
+        <section class="card" id="recentCard">
+          <h2>나의 최근 기록</h2>
+          <div class="subtitle">최근 일주일 동안의 내 독서 기록을 모아봤어요.</div>
+          <div id="logsList" class="logs-list"></div>
+        </section>
+
+        <section class="card" id="clubCard">
+          <h2>클럽의 최근 기록</h2>
+          <div class="subtitle">멤버들이 남긴 최근 기록 20개를 함께 살펴봐요.</div>
+          <div id="clubLogsList" class="logs-list"></div>
+        </section>
+      `;
+
+      // 닉네임 입력창에 현재 닉네임 세팅
+      document.getElementById("nicknameInput").value = displayName;
+      document.getElementById("saveNicknameBtn").onclick = () => saveNickname(user);
+
+      document.getElementById("dateInput").value = todayISO();
+      document.getElementById("saveTodayBtn").onclick = () => saveTodayLog(user);
+      loadTodayLog(user);
+      loadRecentLogs(user);
+      loadClubRecentLogs();
+    }
+
+    async function saveNickname(user) {
+      const input = document.getElementById("nicknameInput");
+      const statusEl = document.getElementById("nicknameStatus");
+      const headerName = document.getElementById("headerDisplayName");
+      const newName = (input.value || "").trim();
+
+      if (!newName) {
+        statusEl.textContent = "닉네임을 비울 수는 없습니다.";
+        return;
+      }
+
+      // profiles에 id=user.id 로 upsert
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          display_name: newName
+        }, { onConflict: "id" });
+
+      if (error) {
+        console.error("닉네임 저장 오류:", error);
+        statusEl.textContent = "닉네임 저장 중 오류가 발생했습니다.";
+      } else {
+        statusEl.textContent = "닉네임이 저장되었습니다.";
+        if (headerName) headerName.textContent = newName;
+        // 클럽 기록 카드도 새 이름 반영되게 다시 로딩
+        loadClubRecentLogs();
+      }
+    }
+
+    async function loadTodayLog(user) {
+      const today = todayISO();
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .eq("book_title", CURRENT_BOOK_TITLE)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("오늘 기록 불러오기 오류:", error);
+        return;
+      }
+
+      if (data) {
+        document.getElementById("sectionInput").value = data.section || "";
+        document.getElementById("keyPointsInput").value = data.key_points || "";
+        document.getElementById("quoteInput").value = data.quote || "";
+        document.getElementById("reflectionInput").value = data.reflection || "";
+        document.getElementById("saveStatus").textContent = "이미 저장된 오늘의 기록을 불러왔습니다.";
+      } else {
+        document.getElementById("saveStatus").textContent = "아직 오늘의 기록이 없습니다. 새로 작성해 보세요.";
+      }
+    }
+
+    async function saveTodayLog(user) {
+      const date = todayISO();
+      const section = document.getElementById("sectionInput").value.trim();
+      const keyPoints = document.getElementById("keyPointsInput").value.trim();
+      const quote = document.getElementById("quoteInput").value.trim();
+      const reflection = document.getElementById("reflectionInput").value.trim();
+      const statusEl = document.getElementById("saveStatus");
+
+      const payload = {
+        user_id: user.id,
+        date,
+        book_title: CURRENT_BOOK_TITLE,
+        section,
+        key_points: keyPoints,
+        quote,
+        reflection
+      };
+
+      const { error } = await supabase
+        .from("reading_logs")
+        .upsert(payload, {
+          onConflict: "user_id,date,book_title"
+        });
+
+      if (error) {
+        console.error("저장 오류:", error);
+        statusEl.textContent = "저장 중 오류가 발생했습니다. 다시 시도해 주세요.";
+      } else {
+        statusEl.textContent = "오늘의 기록이 저장되었습니다.";
+        loadRecentLogs(user);
+        loadClubRecentLogs();
+      }
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "";
+      try {
+        const d = new Date(iso);
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        return `${m}/${day}`;
+      } catch {
+        return iso;
+      }
+    }
+
+    async function loadRecentLogs(user) {
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("book_title", CURRENT_BOOK_TITLE)
+        .order("date", { ascending: false })
+        .limit(7);
+
+      const listEl = document.getElementById("logsList");
+      if (!listEl) return;
+
+      if (error) {
+        console.error("최근 기록 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">최근 기록을 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="muted">아직 저장된 기록이 없습니다.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "log-item";
+        div.innerHTML = `
+          <div class="log-head">
+            <span>${formatDate(row.date)} · ${CURRENT_BOOK_TITLE}</span>
+            <span class="pill">${row.section || "범위 미기입"}</span>
+          </div>
+          <div class="log-mainline">${row.key_points || ""}</div>
+          ${row.quote ? `<div class="log-quote"><span class="muted">오늘의 한 문장</span><br>${row.quote}</div>` : ""}
+        `;
+        div.title = row.reflection || "";
+        listEl.appendChild(div);
+      });
+    }
+
+    async function loadClubRecentLogs() {
+      const listEl = document.getElementById("clubLogsList");
+      if (!listEl) return;
+
+      // 1) 전체 프로필 불러오기 (id, display_name)
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, display_name");
+      if (profileError) {
+        console.error("프로필 불러오기 오류:", profileError);
+      }
+      const nameMap = {};
+      if (profiles) {
+        profiles.forEach(p => {
+          nameMap[p.id] = p.display_name || "";
+        });
+      }
+
+      // 2) 클럽 전체의 최근 기록 불러오기
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("book_title", CURRENT_BOOK_TITLE)
+        .order("date", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("클럽 기록 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">클럽 기록을 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="muted">아직 저장된 클럽 기록이 없습니다.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "log-item";
+        const displayName = nameMap[row.user_id] || "익명 멤버";
+        div.innerHTML = `
+          <div class="log-head">
+            <span>${formatDate(row.date)} · ${displayName}</span>
+            <span class="pill">${row.section || "범위 미기입"}</span>
+          </div>
+          <div class="log-mainline">${row.key_points || ""}</div>
+          ${row.quote ? `<div class="log-quote"><span class="muted">오늘의 한 문장</span><br>${row.quote}</div>` : ""}
+        `;
+        div.title = row.reflection || "";
+        listEl.appendChild(div);
+      });
+    }
+
+    // 초기 실행
+    (async () => {
+      const session = await getSession();
+      if (session && session.user) {
+        renderApp(session.user);
+      } else {
+        renderLogin("login");
+      }
+    })();
+  </script>
+</body>
+</html>
