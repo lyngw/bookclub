@@ -660,6 +660,7 @@
       if (error) {
         console.error("저장 오류:", error);
         statusEl.textContent = "저장 중 오류가 발생했습니다. 다시 시도해 주세요.";
+        alert(`[reading_logs SELECT] ${error.message}\n${error.details || ""}`);
       } else {
         statusEl.textContent = "오늘의 기록이 저장되었습니다.";
         loadRecentLogs(user);
