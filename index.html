@@ -121,7 +121,12 @@
     function renderLogin() {
       const root = document.getElementById("content");
       const userArea = document.getElementById("userArea");
-      userArea.innerHTML = "";
+      userArea.innerHTML = `
+        <div class="user-chip">
+          <span id="headerDisplayName">${displayName}${isAdmin ? " (admin)" : ""}</span>
+          <button id="logoutBtn">로그아웃</button>
+        </div>
+      `;
 
       root.innerHTML = `
         <section class="card">
