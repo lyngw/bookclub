@@ -212,6 +212,8 @@
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    let editingCaseId = null; // null이면 새로 저장, 값이 있으면 수정
+
     function todayISO() {
       const d = new Date();
       const year = d.getFullYear();
