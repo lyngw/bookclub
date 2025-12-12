@@ -878,8 +878,27 @@ if (error) {
           <div class="log-mainline">${escapeHTML(row.summary || "")}</div>
           ${row.lesson ? `<div class="log-quote"><span class="muted">전략 인사이트</span><br>${escapeHTML(row.lesson)}</div>` : ""}
         `;
+      
         listEl.appendChild(div);
       });
+        div.style.cursor = "pointer";
+        div.onclick = () => {
+        editingCaseId = row.id;
+
+        document.getElementById("caseCompanyInput").value = row.company || "";
+        document.getElementById("caseSectionInput").value = row.section || "";
+        document.getElementById("caseSummaryInput").value = row.summary || "";
+        document.getElementById("caseGoodInput").value = row.what_went_well || "";
+        document.getElementById("caseBadInput").value = row.what_went_bad || "";
+        document.getElementById("caseLessonInput").value = row.lesson || "";
+        document.getElementById("caseActionInput").value = row.my_action || "";
+
+        const statusEl = document.getElementById("caseStatus");
+        if (statusEl) statusEl.textContent = "수정 모드: 아래 내용을 고친 뒤 ‘케이스 분석 저장’을 누르세요.";
+
+          // 필요하면 폼 위치로 스크롤
+        document.getElementById("caseCompanyInput").scrollIntoView({ behavior: "smooth", block: "center" });
+      };
     }
 
     async function loadDashboard() {
