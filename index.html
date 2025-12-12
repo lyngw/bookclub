@@ -386,7 +386,7 @@
         kakaoBtn.onclick = async () => {
           await supabase.auth.signInWithOAuth({
             provider: "kakao",
-            options: { redirectTo: window.location.origin }
+            options: { redirectTo: "https://lyngw.github.io/bookclub/" }
           });
         };
       }
