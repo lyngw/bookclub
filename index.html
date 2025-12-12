@@ -694,6 +694,7 @@
       if (error) {
         console.error("최근 기록 불러오기 오류:", error);
         listEl.innerHTML = `<div class="muted">최근 기록을 불러오지 못했습니다.</div>`;
+        alert(`[reading_logs SELECT] ${error.message}\n${error.details || ""}`);
         return;
       }
       if (!data || data.length === 0) {
