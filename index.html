@@ -817,28 +817,30 @@
       }
 
       const payload = {
-        user_id: user.id,
-        book_title: currentBookTitle,
-        season_id: currentSeason?.id || null,
-        archived: false,
-        company, section, summary,
-        what_went_well: good,
-        what_went_bad: bad,
-        lesson,
-        my_action: action
-      };
+  id: editingCaseId || undefined,   // ✅ 수정 모드면 id 포함
+  user_id: user.id,
+  book_title: currentBookTitle,
+  company,
+  section,
+  summary,
+  what_went_well: good,
+  what_went_bad: bad,
+  lesson,
+  my_action: action
+};
 
-      const { error } = await supabase.from("case_notes").insert(payload);
+const { error } = await supabase
+  .from("case_notes")
+  .upsert(payload, { onConflict: "id" }); // ✅ id 기준으로 수정/추가
 
-      if (error) {
-        console.error("케이스 저장 오류:", error);
-        statusEl.textContent = "케이스 저장 중 오류가 발생했습니다.";
-         } else {
-        statusEl.textContent = "케이스 분석이 저장되었습니다.";
-        resetCaseForm();      // ✅ 저장 후 입력칸 초기화
-        loadCaseList(user);   // ✅ 목록 갱신
-        }
-      }
+if (error) {
+  console.error("케이스 저장 오류:", error);
+  statusEl.textContent = "케이스 저장 중 오류가 발생했습니다.";
+} else {
+  statusEl.textContent = editingCaseId ? "케이스 분석이 수정 저장되었습니다." : "케이스 분석이 저장되었습니다.";
+  await loadCaseList(user);
+  resetCaseForm(); // ✅ 저장 후 초기 화면(비워짐)
+}
 
     async function loadCaseList(user) {
       const listEl = document.getElementById("caseList");
