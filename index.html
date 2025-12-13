@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>내곁에북클럽</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    /* =====================
+       Base / Layout
+    ======================*/
+    :root { color-scheme: light dark; }
+    body { margin:0; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif; background:#f5f5f7; color:#111827; }
+    .app { max-width: 980px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:1rem; }
+    h1 { font-size:1.25rem; margin:0; }
+    .muted { font-size:.8rem; color:#6b7280; }
+    .pill { display:inline-flex; align-items:center; padding:.1rem .5rem; border-radius:999px; background:#eef2ff; color:#4f46e5; font-size:.75rem; }
+
+    /* =====================
+       Tabs / Cards
+    ======================*/
+    .tabs { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.8rem; border-bottom:1px solid #e5e7eb; padding-bottom:.4rem; }
+    .tab { border-radius:999px; border:none; padding:.35rem .9rem; font-size:.85rem; cursor:pointer; background:#e5e7eb; color:#374151; }
+    .tab.active { background:#111827; color:#f9fafb; }
+
+    .card { background:#fff; border-radius:16px; padding:1rem 1.1rem; margin-bottom:.9rem; box-shadow:0 1px 4px rgba(15,23,42,.06); border:1px solid #e5e7eb; }
+    h2 { font-size:1rem; margin:0 0 .4rem; }
+    .subtitle { font-size:.82rem; color:#6b7280; margin-bottom:.7rem; }
+
+    /* =====================
+       Forms
+    ======================*/
+    label { font-size:.8rem; display:block; margin:.5rem 0 .15rem; color:#374151; }
+    input[type="text"], textarea { width:100%; box-sizing:border-box; border-radius:10px; border:1px solid #d1d5db; padding:.45rem .6rem; font-size:.9rem; background:#f9fafb; }
+    textarea { min-height:120px; resize:vertical; }
+    .row { display:flex; flex-wrap:wrap; gap:.6rem; }
+    .row > div { flex:1 1 180px; }
+    button.primary { margin-top:.9rem; width:100%; border-radius:999px; border:none; padding:.6rem 1rem; font-size:.95rem; font-weight:600; background:#111827; color:#f9fafb; cursor:pointer; }
+    button.primary:active { opacity:.85; }
+
+    /* =====================
+       Lists / Items
+    ======================*/
+    .logs-list { display:flex; flex-direction:column; gap:.6rem; margin-top:.3rem; }
+    .log-item { padding:.6rem .7rem; border-radius:12px; border:1px solid #e5e7eb; background:#f9fafb; cursor:pointer; }
+    .log-head { display:flex; justify-content:space-between; gap:.5rem; font-size:.8rem; margin-bottom:.3rem; color:#6b7280; }
+    .log-mainline { font-size:.85rem; font-weight:600; color:#111827; }
+    .log-quote { margin-top:.2rem; font-size:.85rem; white-space:pre-wrap; }
+
+    /* =====================
+       Modal
+    ======================*/
+    .modal-back { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; justify-content:center; align-items:center; z-index:50; }
+    .modal { background:#fff; border-radius:16px; max-width:720px; width:92%; padding:1rem 1.1rem; box-shadow:0 10px 30px rgba(0,0,0,.25); }
+    .modal h3 { margin:.1rem 0 .6rem; }
+    .modal .row { margin-bottom:.6rem; }
+    .modal .value { white-space:pre-wrap; }
+
+    /* =====================
+       Dark Mode
+    ======================*/
+    @media (prefers-color-scheme: dark) {
+      body { background:#020617; color:#e5e7eb; }
+      .card { background:#020617; border-color:#1f2937; box-shadow:0 1px 4px rgba(0,0,0,.7); }
+      input[type="text"], textarea { background:#020617; border-color:#1f2937; color:#e5e7eb; }
+      .log-item { background:#020617; border-color:#1f2937; }
+      .tab { background:#111827; color:#e5e7eb; }
+      .tab.active { background:#e5e7eb; color:#020617; }
+      button.primary { background:#e5e7eb; color:#020617; }
+      .modal { background:#020617; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>내곁에북클럽 <span class="muted">· Lessons from the Titans</span></h1>
+    <div id="userArea"></div>
+  </header>
+  <main id="content"></main>
+</div>
+
+<script>
+/* =====================================================
+   CONFIG
+===================================================== */
+const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+const BOOK_TITLE = "Lessons from the Titans";
+
+const { createClient } = window.supabase;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* =====================================================
+   UTIL
+===================================================== */
+const todayISO = () => new Date().toISOString().slice(0,10);
+const esc = (s) => (s ?? "").toString()
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const withBreaks = (s) => esc(s).replace(/\n/g,"<br>");
+
+/* =====================================================
+   AUTH (KAKAO ONLY)
+===================================================== */
+async function renderLogin() {
+  const root = document.getElementById("content");
+  document.getElementById("userArea").innerHTML = "";
+  root.innerHTML = `
+    <section class="card">
+      <h2>카카오 로그인</h2>
+      <div class="subtitle">카카오 계정으로 바로 시작합니다.</div>
+      <button class="primary" id="kakaoBtn">카카오로 로그인</button>
+    </section>
+  `;
+  document.getElementById("kakaoBtn").onclick = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: { redirectTo: location.origin + location.pathname }
+    });
+  };
+}
+
+async function getSession() {
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}
+
+/* =====================================================
+   MODAL
+===================================================== */
+function openModal(title, fields, onEdit) {
+  const back = document.createElement("div");
+  back.className = "modal-back";
+  back.innerHTML = `
+    <div class="modal">
+      <h3>${esc(title)}</h3>
+      ${fields.map(f => `
+        <div class="row">
+          <div class="muted">${esc(f.label)}</div>
+          <div class="value">${withBreaks(f.value)}</div>
+        </div>`).join("")}
+      ${onEdit ? '<button class="primary" id="editBtn">수정하기</button>' : ""}
+      <button class="primary" id="closeBtn">닫기</button>
+    </div>
+  `;
+  back.onclick = e => { if (e.target === back) back.remove(); };
+  document.body.appendChild(back);
+  document.getElementById("closeBtn").onclick = () => back.remove();
+  if (onEdit) document.getElementById("editBtn").onclick = onEdit;
+}
+
+/* =====================================================
+   APP UI
+===================================================== */
+function setupTabs() {
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      const name = tab.dataset.tab;
+      document.querySelectorAll("[data-section]").forEach(s => {
+        s.style.display = s.dataset.section === name ? "block" : "none";
+      });
+    };
+  });
+}
+
+async function renderApp(user) {
+  document.getElementById("userArea").innerHTML = `<span class="pill">로그인됨</span>`;
+  const root = document.getElementById("content");
+  root.innerHTML = `
+    <nav class="tabs">
+      <button class="tab active" data-tab="today">오늘 기록</button>
+      <button class="tab" data-tab="logs">기록 보기</button>
+      <button class="tab" data-tab="cases">케이스 분석</button>
+    </nav>
+
+    <section class="card" data-section="today">
+      <h2>오늘의 독서 기록</h2>
+      <textarea id="quoteInput" placeholder="인상 깊은 문장"></textarea>
+      <textarea id="reflectionInput" placeholder="느낀 점 / 적용"></textarea>
+      <button class="primary" id="saveBtn">저장</button>
+      <div class="muted" id="saveStatus"></div>
+    </section>
+
+    <section class="card" data-section="logs" style="display:none">
+      <h2>나의 기록</h2>
+      <div id="logList" class="logs-list"></div>
+    </section>
+
+    <section class="card" data-section="cases" style="display:none">
+      <h2>클럽 케이스 분석</h2>
+      <div id="caseList" class="logs-list"></div>
+    </section>
+  `;
+  setupTabs();
+  document.getElementById("saveBtn").onclick = () => saveLog(user);
+  loadLogs(user);
+}
+
+/* =====================================================
+   DATA: READING LOGS
+===================================================== */
+async function saveLog(user) {
+  const quote = document.getElementById("quoteInput").value;
+  const reflection = document.getElementById("reflectionInput").value;
+  const { error } = await supabase.from("reading_logs").insert({
+    user_id: user.id,
+    date: todayISO(),
+    book_title: BOOK_TITLE,
+    quote,
+    reflection
+  });
+  const status = document.getElementById("saveStatus");
+  if (error) {
+    status.textContent = "저장 오류";
+  } else {
+    status.textContent = "저장 완료";
+    document.getElementById("quoteInput").value = "";
+    document.getElementById("reflectionInput").value = "";
+    loadLogs(user);
+  }
+}
+
+async function loadLogs(user) {
+  const { data } = await supabase
+    .from("reading_logs")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const list = document.getElementById("logList");
+  list.innerHTML = "";
+  (data || []).forEach(row => {
+    const div = document.createElement("div");
+    div.className = "log-item";
+    div.innerHTML = `
+      <div class="log-head">
+        <span>${row.date}</span>
+        <span class="pill">${BOOK_TITLE}</span>
+      </div>
+      <div class="log-mainline">${esc(row.quote).slice(0,80)}</div>
+    `;
+    div.onclick = () => openModal("독서 기록 상세", [
+      { label: "날짜", value: row.date },
+      { label: "문장", value: row.quote },
+      { label: "느낀 점", value: row.reflection }
+    ]);
+    list.appendChild(div);
+  });
+}
+
+/* =====================================================
+   INIT
+===================================================== */
+(async () => {
+  const session = await getSession();
+  if (!session) renderLogin();
+  else renderApp(session.user);
+})();
+</script>
+</body>
+</html>
