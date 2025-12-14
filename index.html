@@ -437,13 +437,6 @@
   
   function renderApp() {
     const root = $("content");
-    // 초기값 채우기 (프로필 테이블에서 불러온 displayName을 이미 가지고 있다고 가정)
-    const nickInput = document.getElementById("nicknameInput");
-    if (nickInput) nickInput.value = displayName || "";
-
-    // 저장 버튼 연결
-    const saveNickBtn = document.getElementById("saveNicknameBtn");
-    if (saveNickBtn) saveNickBtn.onclick = () => saveNickname(user);
     
     root.innerHTML = `
       <nav class="tabs">
@@ -686,6 +679,12 @@
       ` : ``}
     `;
 
+    // 초기값 채우기 (프로필 테이블에서 불러온 displayName을 이미 가지고 있다고 가정)
+    const nickInput = document.getElementById("nicknameInput");
+    if (nickInput) nickInput.value = displayName || "";
+    // 저장 버튼 연결
+    const saveNickBtn = document.getElementById("saveNicknameBtn");
+    if (saveNickBtn) saveNickBtn.onclick = () => saveNickname(user);
     // season hints
     const seasonHint = $("seasonHint");
     const caseSeasonHint = $("caseSeasonHint");
