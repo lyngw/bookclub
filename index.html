@@ -332,6 +332,10 @@
       const userArea = document.getElementById("userArea");
       const root = document.getElementById("content");
 
+      // Admin badge
+      const adminBadge = document.getElementById("adminBadge");
+      if (adminBadge && isAdmin) adminBadge.style.display = "inline-flex";
+
       userArea.innerHTML = `
         <div class="user-chip">
           <span id="headerDisplayName">${escapeHtml(prof.display_name || "멤버")}</span>
