@@ -421,17 +421,6 @@
       };
     }
   }
-  async function saveNickname(user) {
-    const input = document.getElementById("nicknameInput");
-    const statusEl = document.getElementById("nicknameStatus");
-    const headerName = document.getElementById("headerDisplayName");
-    const newName = (input?.value || "").trim();
-
-    if (!newName) {
-      if (statusEl) statusEl.textContent = "닉네임을 입력해 주세요.";
-      return;
-    }
-
     const { error } = await supabase
       .from("profiles")
       .upsert({ id: user.id, display_name: newName }, { onConflict: "id" });
