@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>내곁에북클럽 – Daily Reading Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif; background:#f5f5f7; color:#111827; }
+    .app-shell{ max-width:960px; margin:0 auto; padding:1.5rem 1rem 3rem; box-sizing:border-box;}
+    header{ display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom: .8rem;}
+    .logo{ font-weight:700; font-size:1.2rem;}
+    .logo span{ font-weight:400; font-size:.8rem; color:#6b7280; display:block;}
+    .user-chip{ font-size:.8rem; padding:.25rem .7rem; border-radius:999px; background:#111827; color:#f9fafb; display:flex; align-items:center; gap:.5rem;}
+    .user-chip button{ background:transparent; border:none; color:inherit; font-size:.8rem; cursor:pointer; padding:0;}
+    .tabs{ display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.8rem; border-bottom:1px solid #e5e7eb; padding-bottom:.4rem;}
+    .tab{ border-radius:999px; border:none; padding:.35rem .9rem; font-size:.85rem; cursor:pointer; background:#e5e7eb; color:#374151;}
+    .tab.active{ background:#111827; color:#f9fafb;}
+    .card{ background:#fff; border-radius:16px; padding:1rem 1.1rem; margin-bottom:.9rem; box-shadow:0 1px 4px rgba(15,23,42,.06); border:1px solid #e5e7eb;}
+    h2{ font-size:1rem; margin:0 0 .4rem;}
+    .subtitle{ font-size:.82rem; color:#6b7280; margin-bottom:.7rem;}
+    label{ font-size:.8rem; display:block; margin:.5rem 0 .15rem; color:#374151;}
+    input[type="text"], input[type="date"], textarea{ width:100%; box-sizing:border-box; border-radius:10px; border:1px solid #d1d5db; padding:.45rem .6rem; font-size:.9rem; font-family:inherit; background:#f9fafb;}
+    textarea{ min-height:70px; resize:vertical;}
+    #quoteInput{ min-height:200px;}
+    #reflectionInput{ min-height:200px;}
+    #caseGoodInput, #caseBadInput, #caseLessonInput{ min-height:150px;}
+    .row{ display:flex; flex-wrap:wrap; gap:.6rem;}
+    .row>div{ flex:1 1 180px;}
+    button.primary{ margin-top:.9rem; width:100%; border-radius:999px; border:none; padding:.6rem 1rem; font-size:.95rem; font-weight:600; background:#111827; color:#f9fafb; cursor:pointer;}
+    button.primary:active{ opacity:.85;}
+    .muted{ font-size:.8rem; color:#6b7280;}
+    .logs-list{ display:flex; flex-direction:column; gap:.6rem; margin-top:.3rem;}
+    .log-item{ padding:.6rem .7rem; border-radius:12px; border:1px solid #e5e7eb; background:#f9fafb;}
+    .log-head{ display:flex; justify-content:space-between; gap:.5rem; font-size:.8rem; margin-bottom:.3rem; color:#6b7280;}
+    .log-mainline{ font-size:.85rem; font-weight:600; color:#111827;}
+    .log-quote{ margin-top:.2rem; font-size:.85rem;}
+    .pill{ display:inline-flex; align-items:center; padding:.05rem .5rem; border-radius:999px; background:#eef2ff; color:#4f46e5; font-size:.75rem;}
+    .section-hidden{ display:none;}
+    .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.6rem; margin-top:.6rem;}
+    .stat-card{ padding:.6rem .7rem; border-radius:12px; border:1px solid #e5e7eb; background:#f9fafb; font-size:.85rem;}
+    .stat-label{ font-size:.78rem; color:#6b7280; margin-bottom:.3rem;}
+    .stat-value{ font-size:1rem; font-weight:600;}
+    .mini-list{ margin:.4rem 0 0; padding-left:1rem; font-size:.8rem;}
+    .mini-list li{ margin-bottom:.1rem;}
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin: 0.6rem 0 0.2rem;
+    }
+    .filter-bar input[type="text"],
+    .filter-bar select {
+      flex: 1 1 180px;
+      padding: 0.42rem 0.55rem;
+      font-size: 0.85rem;
+    }
+    button.secondary {
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #111827;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .clickable { cursor: pointer; }
+    .details-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+    .details-row { display: grid; grid-template-columns: 96px 1fr; gap: 0.6rem; align-items: start; }
+    .details-k { font-size: 0.78rem; color: #6b7280; }
+    .details-v { font-size: 0.9rem; color: inherit; }
+
+    @media (prefers-color-scheme: dark) {
+      button.secondary {
+        background: #020617;
+        color: #e5e7eb;
+        border-color: #1f2937;
+      }
+    }
+
+  @media (prefers-color-scheme: dark) {
+      body{ background:#020617; color:#e5e7eb;}
+      .card{ background:#020617; border-color:#1f2937; box-shadow:0 1px 4px rgba(0,0,0,.7);}
+      input[type="text"], input[type="date"], textarea{ background:#020617; border-color:#1f2937; color:#e5e7eb;}
+      .log-item, .stat-card{ background:#020617; border-color:#1f2937;}
+      .user-chip{ background:#e5e7eb; color:#020617;}
+      button.primary{ background:#e5e7eb; color:#020617;}
+      .tabs{ border-color:#1f2937;}
+      .tab{ background:#111827; color:#e5e7eb;}
+      .tab.active{ background:#e5e7eb; color:#020617;}
+    }
+  
+    /* Modal */
+    .modal-backdrop{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:1rem;
+      z-index:9999;
+    }
+    .modal-backdrop.open{display:flex;}
+    .modal{
+      width:min(720px, 100%);
+      border-radius:18px;
+      background:#ffffff;
+      border:1px solid #e5e7eb;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      overflow:hidden;
+    }
+    .modal-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:0.9rem 1rem;
+      border-bottom:1px solid #e5e7eb;
+      gap:0.8rem;
+    }
+    .modal-title{
+      font-weight:700;
+      font-size:0.95rem;
+      line-height:1.2;
+    }
+    .modal-close{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      font-size:1.2rem;
+      padding:0.1rem 0.35rem;
+      line-height:1;
+      opacity:0.8;
+    }
+    .modal-close:hover{opacity:1;}
+    .modal-body{
+      padding:0.9rem 1rem 1.1rem;
+      max-height:min(70vh, 680px);
+      overflow:auto;
+      font-size:0.9rem;
+      line-height:1.55;
+    }
+    .modal-body .field{
+      margin-top:0.65rem;
+    }
+    .modal-body .field-label{
+      font-size:0.78rem;
+      color:#6b7280;
+      margin-bottom:0.2rem;
+    }
+    .modal-body .field-value{
+      white-space:pre-wrap;
+    }
+    .clickable{cursor:pointer;}
+    .clickable:hover{transform: translateY(-1px); box-shadow: 0 2px 10px rgba(15,23,42,0.08);}
+    @media (prefers-color-scheme: dark) {
+      .modal{background:#020617; border-color:#1f2937;}
+      .modal-header{border-color:#1f2937;}
+      .modal-body .field-label{color:#94a3b8;}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="logo">
+        내곁에북클럽
+        <span id="headerBookLabel">Daily Reading</span>
+      </div>
+      <div id="userArea"></div>
+    </header>
+    <main id="content"></main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div id="modalTitle" class="modal-title">상세 보기</div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://mpmjjkosxhnffwymspru.supabase.co";
+    const SUPABASE_ANON_KEY = "REPLACE_ME_WITH_ANON_KEY";
+
+    const USE_ADMIN_TABLE = true; // admin_users 테이블 사용(권장)
+    const ADMIN_EMAILS_FALLBACK = ["lyngw@naver.com"]; // 테이블이 없을 때 임시
+
+    const DEFAULT_BOOK_TITLE = "Lessons from the Titans";
+
+    const { createClient } = window.supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ===== Club list server-side filter/pagination (A) =====
+    let clubProfilesCache = null;      // [{id, display_name}]
+    let clubProfileMap = {};           // id -> display_name
+
+    let clubLogsPage = 0;
+    const CLUB_LOGS_PAGE_SIZE = 30;
+    let clubLogsHasMore = true;
+    let clubLogsLoading = false;
+
+    let clubCasesPage = 0;
+    const CLUB_CASES_PAGE_SIZE = 20;
+    let clubCasesHasMore = true;
+    let clubCasesLoading = false;
+
+    const clubFilters = {
+      logs: { keyword: "", member: "", from: "", to: "" },
+      cases: { keyword: "", member: "", from: "", to: "" }
+    };
+
+    let _clubFilterTimer = null;
+
+
+    function todayISO() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+    function formatDate(iso) {
+      if (!iso) return "";
+      try {
+        const d = new Date(iso);
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        return `${m}/${day}`;
+      } catch {
+        return String(iso);
+      }
+    }
+    function safeText(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+    // 줄바꿈 유지용(개행을 <br>로 변환). XSS 방지를 위해 먼저 escape 후 변환합니다.
+    function safeHtmlWithBreaks(s) {
+      return safeText(s).replace(/\r?\n/g, "<br>");
+    }
+
+    // Modal helpers
+    function openModal(titleOrOpts, fieldsMaybe) {
+      const backdrop = document.getElementById("modalBackdrop");
+      const wrap = document.getElementById("modalWrap");
+      const titleEl = document.getElementById("modalTitle");
+      const bodyEl = document.getElementById("modalBody");
+
+      if (!backdrop || !wrap || !titleEl || !bodyEl) return;
+
+      // ✅ Support both signatures:
+      //   openModal("Title", [{label,value}...])
+      //   openModal({ title, fields: [{k,v}...] })
+      let title = titleOrOpts;
+      let fields = fieldsMaybe;
+
+      if (titleOrOpts && typeof titleOrOpts === "object") {
+        title = titleOrOpts.title;
+        fields = titleOrOpts.fields || titleOrOpts.items || titleOrOpts.rows || [];
+      }
+
+      titleEl.textContent = typeof title === "string" ? title : (title ? String(title) : "");
+
+      if (!Array.isArray(fields) || fields.length === 0) {
+        bodyEl.innerHTML = `<div class="muted">표시할 내용이 없습니다.</div>`;
+      } else {
+        bodyEl.innerHTML = fields.map(f => {
+          const label = (f && (f.label ?? f.k ?? "")) || "";
+          let raw = (f && (f.value ?? f.v ?? "")) ?? "";
+          if (raw === null || raw === undefined) raw = "";
+          if (typeof raw !== "string") {
+            try { raw = JSON.stringify(raw, null, 2); } catch { raw = String(raw); }
+          }
+          const valueHtml = safeHtmlWithBreaks(raw);
+          return `<div class="kv">
+                    <div class="k">${escapeHtml(String(label))}</div>
+                    <div class="v">${valueHtml}</div>
+                  </div>`;
+        }).join("");
+      }
+
+      backdrop.classList.add("show");
+      wrap.classList.add("show");
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById("modalBackdrop");
+      if (!backdrop) return;
+      backdrop.classList.remove("open");
+      backdrop.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+
+    function wireModalEvents() {
+      const backdrop = document.getElementById("modalBackdrop");
+      const closeBtn = document.getElementById("modalCloseBtn");
+      if (closeBtn) closeBtn.onclick = closeModal;
+      if (backdrop) {
+        backdrop.addEventListener("click", (e) => {
+          if (e.target === backdrop) closeModal();
+        });
+      }
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      });
+    }
+
+
+    async async function openLogDetails(arg) {
+      // arg: row object OR id(uuid)
+      let row = arg;
+      if (typeof arg === "string") {
+        const { data, error } = await supabase
+          .from("reading_logs")
+          .select("*")
+          .eq("id", arg)
+          .maybeSingle();
+        if (error) {
+          console.error("openLogDetails fetch error:", error);
+          alert("상세 데이터를 불러오지 못했습니다.");
+          return;
+        }
+        row = data;
+      }
+      if (!row) return;
+
+      openModal({
+        title: "독서 기록 상세",
+        fields: [
+          { k: "날짜", v: safeText(row.date || "") },
+          { k: "읽은 범위", v: safeText(row.section || "") },
+          { k: "핵심 포인트", v: safeHtmlWithBreaks(row.key_points || "") },
+          { k: "오늘의 한 문장", v: safeHtmlWithBreaks(row.quote || "") },
+          { k: "느낀 점 / 적용", v: safeHtmlWithBreaks(row.reflection || "") },
+        ],
+        actions: [{ id: "closeModalBtn", label: "닫기", variant: "primary" }],
+      });
+
+      wireModalEvents();
+    }
+
+    async async function openCaseDetails(arg) {
+      let row = arg;
+      if (typeof arg === "string") {
+        const { data, error } = await supabase
+          .from("case_notes")
+          .select("*")
+          .eq("id", arg)
+          .maybeSingle();
+        if (error) {
+          console.error("openCaseDetails fetch error:", error);
+          alert("상세 데이터를 불러오지 못했습니다.");
+          return;
+        }
+        row = data;
+      }
+      if (!row) return;
+
+      openModal({
+        title: "케이스 분석 상세",
+        fields: [
+          { k: "작성일", v: safeText((row.created_at || "").slice(0, 10)) },
+          { k: "기업", v: safeText(row.company || "") },
+          { k: "읽은 범위", v: safeText(row.section || "") },
+          { k: "한 줄 요약", v: safeHtmlWithBreaks(row.summary || "") },
+          { k: "잘 된 점", v: safeHtmlWithBreaks(row.what_went_well || "") },
+          { k: "안 된 점", v: safeHtmlWithBreaks(row.what_went_bad || "") },
+          { k: "전략 인사이트", v: safeHtmlWithBreaks(row.lesson || "") },
+          { k: "나의 적용", v: safeHtmlWithBreaks(row.my_action || "") },
+        ],
+        actions: [{ id: "closeModalBtn", label: "닫기", variant: "primary" }],
+      });
+
+      wireModalEvents();
+    }
+
+
+    let currentBookTitle = DEFAULT_BOOK_TITLE;
+    let currentSeason = null; // { id?, name, start, end }
+
+    // pagination state
+    let myAllLogsPage = 0;
+    const MY_ALL_LOGS_PAGE_SIZE = 30;
+
+    async function loadClubSettings() {
+      currentBookTitle = DEFAULT_BOOK_TITLE;
+      currentSeason = null;
+
+      const { data, error } = await supabase
+        .from("club_settings")
+        .select("key, value");
+
+      if (!error && data) {
+        for (const row of data) {
+          if (row.key === "current_book" && row.value?.title) currentBookTitle = row.value.title;
+          if (row.key === "season" && row.value) currentSeason = row.value;
+        }
+      }
+
+      const headerLabel = document.getElementById("headerBookLabel");
+      if (headerLabel) headerLabel.textContent = `${currentBookTitle} · Daily Reading`;
+    }
+
+    async function getSession() {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    }
+
+    async function isAdminUser(user) {
+      if (!user) return false;
+
+      if (USE_ADMIN_TABLE) {
+        const { data, error } = await supabase
+          .from("admin_users")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!error && data) return true;
+      }
+      return ADMIN_EMAILS_FALLBACK.includes(user.email || "");
+    }
+
+    async function ensureProfile(user) {
+      if (!user?.id) return;
+      const guessName =
+        user.user_metadata?.name ||
+        user.user_metadata?.nickname ||
+        user.user_metadata?.full_name ||
+        "익명";
+
+      const { data: existing, error: selErr } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (selErr) {
+        console.warn("profiles select failed:", selErr.message);
+        return;
+      }
+
+      if (!existing) {
+        const { error: insErr } = await supabase
+          .from("profiles")
+          .insert({ id: user.id, display_name: guessName });
+        if (insErr) console.warn("profiles insert failed:", insErr.message);
+      }
+    }
+
+    function renderLogin() {
+      const root = document.getElementById("content");
+      const userArea = document.getElementById("userArea");
+      userArea.innerHTML = "";
+
+      root.innerHTML = `
+        <section class="card">
+          <h2>로그인</h2>
+          <div class="subtitle">카카오로 로그인해 오늘의 독서 기록을 남겨보세요.</div>
+          <button class="primary" id="kakaoLoginBtn" style="margin-top:0.4rem; background:#FEE500; color:#000;">카카오로 로그인</button>
+          <div class="muted" style="margin-top:0.6rem;">
+            * 문제가 있으면 브라우저의 팝업/추적 방지 설정을 확인해 주세요.
+          </div>
+        </section>
+      `;
+
+      document.getElementById("kakaoLoginBtn").onclick = async () => {
+        await supabase.auth.signInWithOAuth({
+          provider: "kakao",
+          options: { redirectTo: "https://lyngw.github.io/bookclub/" }
+        });
+      };
+    }
+
+    function setupTabs() {
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+      const sections = Array.from(document.querySelectorAll("[data-section]"));
+
+      function activate(name) {
+        tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+        sections.forEach(s => s.classList.toggle("section-hidden", s.dataset.section !== name));
+      }
+
+      tabs.forEach(tab => tab.addEventListener("click", () => activate(tab.dataset.tab)));
+      activate("today");
+    }
+
+    async function upsertReadingLogResilient(payload) {
+      let { error } = await supabase.from("reading_logs").upsert(payload, { onConflict: "user_id,date,book_title" });
+      if (error && /season_id|archived/i.test(error.message || "")) {
+        const p2 = { ...payload };
+        delete p2.season_id;
+        delete p2.archived;
+        ({ error } = await supabase.from("reading_logs").upsert(p2, { onConflict: "user_id,date,book_title" }));
+      }
+      return { error };
+    }
+
+    async function insertCaseResilient(payload) {
+      let { error } = await supabase.from("case_notes").insert(payload);
+      if (error && /season_id|archived/i.test(error.message || "")) {
+        const p2 = { ...payload };
+        delete p2.season_id;
+        delete p2.archived;
+        ({ error } = await supabase.from("case_notes").insert(p2));
+      }
+      return { error };
+    }
+
+    async async function renderApp(user) {
+      const userArea = document.getElementById("userArea");
+      const root = document.getElementById("content");
+
+      try { await ensureProfile(user); } catch (e) { console.warn("ensureProfile error:", e); }
+
+      const admin = await isAdminUser(user);
+
+      let displayName = user.user_metadata?.name || user.user_metadata?.nickname || user.email || "익명";
+      const { data: prof, error: profErr } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!profErr && prof?.display_name) displayName = prof.display_name;
+
+      userArea.innerHTML = `
+        <div class="user-chip">
+          <span id="headerDisplayName">${safeText(displayName)}</span>
+          <button id="logoutBtn">로그아웃</button>
+        </div>
+      `;
+      document.getElementById("logoutBtn").onclick = async () => {
+        await supabase.auth.signOut();
+        renderLogin();
+      };
+
+      root.innerHTML = `
+        <nav class="tabs">
+          <button class="tab" data-tab="profile">프로필</button>
+          <button class="tab" data-tab="today">오늘의 독서 기록</button>
+          <button class="tab" data-tab="logs">기록 보기</button>
+          <button class="tab" data-tab="caseWrite">케이스 분석</button>
+          <button class="tab" data-tab="caseView">분석 보기</button>
+          <button class="tab" data-tab="dashboard">클럽 대시보드</button>
+          ${isAdmin ? `<button class="tab" data-tab="settings">클럽 설정</button>` : ""}
+        </nav>
+
+        <section class="card" data-section="profile" id="profileSection">
+          <h2>내 프로필</h2>
+          <div class="subtitle">클럽에서 보이는 이름(닉네임)을 바꿀 수 있어요.</div>
+          <label>현재 닉네임</label>
+          <input id="nicknameInput" type="text" />
+          <button class="primary" id="saveNicknameBtn">닉네임 저장</button>
+          <div class="muted" id="nicknameStatus"></div>
+        </section>
+
+        <section class="card" data-section="today" id="todaySection">
+          <h2>오늘의 독서 기록</h2>
+          <div class="subtitle">
+            오늘 <span id="currentBookLabel"></span>에서 읽은 내용을 정리해 보세요. (자동으로 오늘 날짜로 저장됩니다.)
+          </div>
+          <div class="row">
+            <div>
+              <label>읽은 범위 (챕터 / 페이지)</label>
+              <input id="sectionInput" type="text" placeholder="예: Chapter 3 · p.45–70" />
+            </div>
+            <div>
+              <label>날짜</label>
+              <input id="dateInput" type="text" disabled />
+            </div>
+          </div>
+          <label>오늘의 핵심 포인트</label>
+          <textarea id="keyPointsInput" placeholder="핵심 문장 2~3줄로 요약해 보세요."></textarea>
+          <label>오늘의 한 문장 (인상 깊었던 문장)</label>
+          <textarea id="quoteInput" placeholder="원문 그대로 옮겨 적어도, 요약해 적어도 좋아요."></textarea>
+          <label>느낀 점 / 적용 아이디어</label>
+          <textarea id="reflectionInput" placeholder="오늘 배운 점, 적용할 부분을 적어보세요."></textarea>
+          <button class="primary" id="saveTodayBtn">오늘 기록 저장</button>
+          <div class="muted" id="saveStatus"></div>
+        </section>
+
+        <section data-section="logs" id="logsSection">
+          <section class="card">
+            <h2>나의 최근 기록</h2>
+            <div class="subtitle">최근 일주일 동안의 내 독서 기록을 모아봤어요. (카드를 클릭하면 전체 내용을 볼 수 있어요)</div>
+            <div id="logsList" class="logs-list"></div>
+          </section>
+
+          <section class="card">
+            <h2>내 기록 전체</h2>
+            <div class="subtitle">저장된 내 기록을 최신순으로 모두 볼 수 있어요. (카드를 클릭하면 전체 내용을 볼 수 있어요)</div>
+            <div id="myAllLogsList" class="logs-list"></div>
+            <button class="primary" id="myAllLogsMoreBtn" style="margin-top:0.7rem;">더 불러오기</button>
+            <div class="muted" id="myAllLogsStatus"></div>
+          </section>
+
+          <section class="card">
+            <h2>클럽의 최근 기록</h2>
+            <div class="subtitle">멤버들이 남긴 최근 기록 20개를 함께 살펴봐요. (카드를 클릭하면 전체 내용을 볼 수 있어요)</div>
+            <div class="filter-bar">
+            <input id="clubLogKeyword" type="text" placeholder="클럽 기록 검색 (핵심/문장/느낀점/범위)" />
+            <select id="clubLogMember"></select>
+            <button class="secondary" id="clubLogResetBtn" type="button">초기화</button>
+          </div>
+          <div id="clubLogsList" class="logs-list"></div>
+            <button class="secondary" id="clubLogsMoreBtn" style="margin-top:0.6rem;">더 보기</button>
+            <div class="muted" id="clubLogsMoreStatus"></div>
+          </section>
+        </section>
+
+        <section class="card" data-section="caseWrite" id="caseWriteSection">
+          <h2>케이스 분석</h2>
+          <div class="subtitle"><span id="caseBookLabel"></span>의 기업 사례를 케이스 스터디처럼 정리해 보세요.</div>
+          <label>기업 이름 / 티커</label>
+          <input id="caseCompanyInput" type="text" placeholder="예: GE, Boeing, GM..." />
+          <label>읽은 범위 (챕터 / 페이지)</label>
+          <input id="caseSectionInput" type="text" placeholder="예: Chapter 4 · p.120–150" />
+          <label>한 줄 요약</label>
+          <textarea id="caseSummaryInput" placeholder="이 케이스는 결국 무엇에 대한 이야기인가요?"></textarea>
+          <label>무엇이 잘 되었나?</label>
+          <textarea id="caseGoodInput" placeholder="성공 요인 / 강점"></textarea>
+          <label>무엇이 잘 안 되었나?</label>
+          <textarea id="caseBadInput" placeholder="실패 요인 / 약점"></textarea>
+          <label>전략적 인사이트</label>
+          <textarea id="caseLessonInput" placeholder="프레임워크 / 통찰"></textarea>
+          <label>나의 적용 아이디어</label>
+          <textarea id="caseActionInput" placeholder="내 삶/일/비즈니스에 적용"></textarea>
+          <button class="primary" id="saveCaseBtn">케이스 저장</button>
+          <div class="muted" id="caseStatus"></div>
+        </section>
+
+
+        <section class="card" data-section="caseView" id="caseViewSection">
+          <h2>분석 보기</h2>
+          <div class="subtitle"><span id="caseViewBookLabel"></span> · 내가 쓴 케이스와 멤버들의 케이스를 모아볼 수 있어요.</div>
+          <div style="margin-top:0.9rem;">
+            <h2 style="margin-top:0.2rem;">내가 쓴 케이스들</h2>
+            <div class="subtitle">최근 케이스 10개</div>
+            <div id="caseList" class="logs-list"></div>
+          </div>
+
+          <div style="margin-top:0.9rem;">
+            <h2 style="margin-top:0.2rem;">클럽 멤버들의 케이스</h2>
+            <div class="subtitle">멤버들이 저장한 최근 케이스 30개를 함께 볼 수 있어요. (카드를 클릭하면 전체 내용을 볼 수 있어요)</div>
+            <div class="filter-bar">
+            <input id="clubCaseKeyword" type="text" placeholder="클럽 케이스 검색 (기업/요약/인사이트/내용)" />
+            <select id="clubCaseMember"></select>
+            <button class="secondary" id="clubCaseResetBtn" type="button">초기화</button>
+          </div>
+          <div id="clubCaseList" class="logs-list"></div>
+            <button class="secondary" id="clubCasesMoreBtn" style="margin-top:0.6rem;">더 보기</button>
+            <div class="muted" id="clubCasesMoreStatus"></div>
+          </div>
+        
+        </section>
+
+        
+
+        <section class="card" data-section="dashboard" id="dashboardSection">
+          <h2>클럽 대시보드</h2>
+          <div class="subtitle">
+            <span id="dashboardBookLabel"></span> 기준 활동 요약입니다.
+            <span id="seasonLabel" class="muted"></span>
+          </div>
+          <div id="dashboardContent"><div class="muted">데이터를 불러오는 중...</div></div>
+        </section>
+
+        ${admin ? `
+          <section class="card" data-section="settings" id="settingsSection">
+            <h2>클럽 설정</h2>
+            <div class="subtitle">책과 시즌(기간)을 설정할 수 있어요. 설정은 모든 멤버에게 반영됩니다.</div>
+            <label>현재 책 제목</label>
+            <input id="settingBookTitleInput" type="text" placeholder="${safeText(DEFAULT_BOOK_TITLE)}" />
+            <label>시즌 이름 (선택)</label>
+            <input id="settingSeasonNameInput" type="text" placeholder="예: 1기 · Titans 12월" />
+            <div class="row">
+              <div><label>시즌 시작일</label><input id="settingSeasonStartInput" type="date" /></div>
+              <div><label>시즌 종료일</label><input id="settingSeasonEndInput" type="date" /></div>
+            </div>
+            <button class="primary" id="saveSettingsBtn">클럽 설정 저장</button>
+            <div class="muted" id="settingsStatus"></div>
+          </section>
+        ` : ""}
+      `;
+
+      document.getElementById("currentBookLabel").textContent = currentBookTitle;
+      const caseBook = document.getElementById("caseBookLabel");
+      if (caseBook) caseBook.textContent = currentBookTitle;
+      const caseViewBook = document.getElementById("caseViewBookLabel");
+      if (caseViewBook) caseViewBook.textContent = currentBookTitle;
+      document.getElementById("dashboardBookLabel").textContent = currentBookTitle;
+
+      if (currentSeason?.name) {
+        const start = currentSeason.start || "";
+        const end = currentSeason.end || "";
+        document.getElementById("seasonLabel").textContent = ` · 시즌: ${currentSeason.name} (${start} ~ ${end})`;
+      } else {
+        document.getElementById("seasonLabel").textContent = "";
+      }
+
+      document.getElementById("nicknameInput").value = displayName;
+      document.getElementById("saveNicknameBtn").onclick = () => saveNickname(user);
+
+      document.getElementById("dateInput").value = todayISO();
+      document.getElementById("saveTodayBtn").onclick = () => saveTodayLog(user);
+
+      document.getElementById("saveCaseBtn").onclick = () => saveCase(user);
+
+      if (admin) {
+        fillSettingsForm();
+        document.getElementById("saveSettingsBtn").onclick = () => saveClubSettings(user);
+      }
+
+      setupTabs();
+      attachClubFilterHandlers();
+
+      await loadTodayLog(user);
+      await loadRecentLogs(user);
+      await loadClubLogs(true);
+      await loadCaseList(user);
+      loadClubCases(true);
+      await loadDashboard();
+    }
+
+    async function saveNickname(user) {
+      const input = document.getElementById("nicknameInput");
+      const statusEl = document.getElementById("nicknameStatus");
+      const headerName = document.getElementById("headerDisplayName");
+      const newName = (input.value || "").trim();
+      if (!newName) { statusEl.textContent = "닉네임을 비울 수는 없습니다."; return; }
+
+      const { error } = await supabase.from("profiles").upsert(
+        { id: user.id, display_name: newName },
+        { onConflict: "id" }
+      );
+
+      if (error) {
+        console.error("닉네임 저장 오류:", error);
+        statusEl.textContent = "닉네임 저장 중 오류가 발생했습니다.";
+      } else {
+        statusEl.textContent = "닉네임이 저장되었습니다.";
+        if (headerName) headerName.textContent = newName;
+        await loadClubLogs(true);
+        await loadDashboard();
+      }
+    }
+
+    async function loadTodayLog(user) {
+      const today = todayISO();
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .eq("book_title", currentBookTitle)
+        .maybeSingle();
+
+      const statusEl = document.getElementById("saveStatus");
+      if (error && error.code !== "PGRST116") {
+        console.error("오늘 기록 불러오기 오류:", error);
+        statusEl.textContent = "오늘 기록을 불러오지 못했습니다.";
+        return;
+      }
+
+      if (data) {
+        document.getElementById("sectionInput").value = data.section || "";
+        document.getElementById("keyPointsInput").value = data.key_points || "";
+        document.getElementById("quoteInput").value = data.quote || "";
+        document.getElementById("reflectionInput").value = data.reflection || "";
+        statusEl.textContent = "이미 저장된 오늘의 기록을 불러왔습니다.";
+      } else {
+        statusEl.textContent = "아직 오늘의 기록이 없습니다. 새로 작성해 보세요.";
+      }
+    }
+
+    function clearTodayInputs() {
+      document.getElementById("sectionInput").value = "";
+      document.getElementById("keyPointsInput").value = "";
+      document.getElementById("quoteInput").value = "";
+      document.getElementById("reflectionInput").value = "";
+    }
+
+    async function saveTodayLog(user) {
+      const date = todayISO();
+      const section = document.getElementById("sectionInput").value.trim();
+      const keyPoints = document.getElementById("keyPointsInput").value.trim();
+      const quote = document.getElementById("quoteInput").value.trim();
+      const reflection = document.getElementById("reflectionInput").value.trim();
+      const statusEl = document.getElementById("saveStatus");
+
+      const payload = {
+        user_id: user.id,
+        date,
+        book_title: currentBookTitle,
+        section,
+        key_points: keyPoints,
+        quote,
+        reflection,
+        season_id: currentSeason?.id ?? null,
+        archived: false
+      };
+
+      const { error } = await upsertReadingLogResilient(payload);
+
+      if (error) {
+        console.error("저장 오류:", error);
+        statusEl.textContent = "저장 중 오류가 발생했습니다. (테이블 컬럼/정책을 확인해 주세요)";
+        return;
+      }
+
+      statusEl.textContent = "오늘의 기록이 저장되었습니다.";
+      clearTodayInputs();
+      await loadRecentLogs(user);
+      await loadClubLogs(true);
+      await loadClubCases(true);
+      await loadDashboard();
+    }
+
+
+    async function loadRecentLogs(user) {
+      const listEl = document.getElementById("logsList");
+      if (!listEl) return;
+
+      listEl.innerHTML = `<div class="muted">불러오는 중...</div>`;
+
+      let q = supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("book_title", currentBookTitle)
+        .order("date", { ascending: false })
+        .limit(200);
+
+      // 시즌 필터 (있으면)
+      if (currentSeason && currentSeason.id) {
+        q = q.eq("season_id", currentSeason.id);
+      }
+
+      // archived 컬럼이 있으면 기본적으로 숨김
+      try { q = q.eq("archived", false); } catch (e) {}
+
+      const { data, error } = await q;
+
+      if (error) {
+        console.error("최근 기록 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">최근 기록을 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="muted">아직 저장된 기록이 없습니다.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "log-item clickable";
+        div.innerHTML = `
+          <div class="log-head">
+            <span>${formatDate(row.date)} · ${safeText(currentBookTitle)}</span>
+            <span class="pill">${safeText(row.section || "범위 미기입")}</span>
+          </div>
+          <div class="log-mainline">${safeHtmlWithBreaks(row.key_points || "")}</div>
+          ${row.quote ? `<div class="log-quote"><span class="muted">오늘의 한 문장</span><br>${safeHtmlWithBreaks(row.quote)}</div>` : ""}
+        `;
+        div.addEventListener("click", () => openLogDetails(row, true));
+        listEl.appendChild(div);
+      });
+    }
+
+async function loadClubRecentLogs() {
+      const listEl = document.getElementById("clubLogsList");
+      if (!listEl) return;
+
+      // 프로필 캐시
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, display_name");
+      if (profileError) console.error("프로필 불러오기 오류:", profileError);
+      clubProfilesCache = profiles || clubProfilesCache || [];
+
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("*")
+        .eq("book_title", currentBookTitle)
+        .order("date", { ascending: false })
+        .limit(200);
+
+      if (error) {
+        console.error("클럽 기록 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">클럽 기록을 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      clubLogsCache = data || [];
+
+      // 멤버 셀렉트 옵션 채우기 + 렌더
+      ensureMemberSelectOptions(document.getElementById("clubLogMember"), clubProfilesCache);
+      renderClubLogsFromCache();
+    }
+
+    function clearCaseInputs() {
+      document.getElementById("caseCompanyInput").value = "";
+      document.getElementById("caseSectionInput").value = "";
+      document.getElementById("caseSummaryInput").value = "";
+      document.getElementById("caseGoodInput").value = "";
+      document.getElementById("caseBadInput").value = "";
+      document.getElementById("caseLessonInput").value = "";
+      document.getElementById("caseActionInput").value = "";
+    }
+
+    async function saveCase(user) {
+      const company = document.getElementById("caseCompanyInput").value.trim();
+      const section = document.getElementById("caseSectionInput").value.trim();
+      const summary = document.getElementById("caseSummaryInput").value.trim();
+      const good = document.getElementById("caseGoodInput").value.trim();
+      const bad = document.getElementById("caseBadInput").value.trim();
+      const lesson = document.getElementById("caseLessonInput").value.trim();
+      const action = document.getElementById("caseActionInput").value.trim();
+      const statusEl = document.getElementById("caseStatus");
+
+      if (!company && !summary) {
+        statusEl.textContent = "최소한 기업 이름이나 한 줄 요약 중 하나는 적어 주세요.";
+        return;
+      }
+
+      const payload = {
+        user_id: user.id,
+        book_title: currentBookTitle,
+        season_id: currentSeason?.id ?? null,
+        archived: false,
+        company, section, summary,
+        what_went_well: good,
+        what_went_bad: bad,
+        lesson,
+        my_action: action
+      };
+
+      const { error } = await insertCaseResilient(payload);
+
+      if (error) {
+        console.error("케이스 저장 오류:", error);
+        statusEl.textContent = "케이스 저장 중 오류가 발생했습니다. (테이블 컬럼/정책 확인)";
+        return;
+      }
+
+      statusEl.textContent = "케이스 분석이 저장되었습니다.";
+      clearCaseInputs();
+      await loadCaseList(user);
+    }
+
+    async function loadCaseList(user) {
+      const listEl = document.getElementById("caseList");
+      if (!listEl) return;
+
+      const { data, error } = await supabase
+        .from("case_notes")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("book_title", currentBookTitle)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error("케이스 목록 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">케이스 목록을 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        listEl.innerHTML = `<div class="muted">아직 저장된 케이스 분석이 없습니다.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "log-item clickable";
+        const dateLabel = row.created_at ? formatDate(row.created_at) : "";
+        div.innerHTML = `
+          <div class="log-head">
+            <span>${safeText(dateLabel)} · ${safeText(row.company || "기업 미기입")}</span>
+            <span class="pill">${safeText(row.section || "범위 미기입")}</span>
+          </div>
+          <div class="log-mainline">${safeHtmlWithBreaks(row.summary || "")}</div>
+          ${row.lesson ? `<div class="log-quote"><span class="muted">전략 인사이트</span><br>${safeHtmlWithBreaks(row.lesson)}</div>` : ""}
+        `;
+        
+        const displayNameLabel = "나";
+        div.addEventListener("click", () => {
+          openModal(`${row.company || "기업"} · 케이스 분석`, [
+            { label: "작성자", value: displayNameLabel || "" },
+            { label: "책", value: row.book_title || "" },
+            { label: "읽은 범위", value: row.section || "" },
+            { label: "한 줄 요약", value: row.summary || "" },
+            { label: "무엇이 잘 되었나", value: row.what_went_well || "" },
+            { label: "무엇이 잘 안 되었나", value: row.what_went_bad || "" },
+            { label: "전략적 인사이트", value: row.lesson || "" },
+            { label: "나의 적용 아이디어", value: row.my_action || "" },
+            { label: "작성일", value: row.created_at || "" }
+          ]);
+        });
+        listEl.appendChild(div);
+      });
+    }
+
+
+    async function loadClubCaseList() {
+      const listEl = document.getElementById("clubCaseList");
+      if (!listEl) return;
+
+      // 프로필 캐시
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, display_name");
+      if (profileError) console.error("프로필 불러오기 오류:", profileError);
+      clubProfilesCache = profiles || clubProfilesCache || [];
+
+      const { data, error } = await supabase
+        .from("case_notes")
+        .select("*")
+        .eq("book_title", currentBookTitle)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (error) {
+        console.error("클럽 케이스 불러오기 오류:", error);
+        listEl.innerHTML = `<div class="muted">클럽 케이스를 불러오지 못했습니다.</div>`;
+        return;
+      }
+
+      clubCasesCache = data || [];
+
+      ensureMemberSelectOptions(document.getElementById("clubCaseMember"), clubProfilesCache);
+      renderClubCasesFromCache();
+    }
+
+
+
+
+    async function loadDashboard() {
+      const container = document.getElementById("dashboardContent");
+      if (!container) return;
+      container.innerHTML = `<div class="muted">데이터를 불러오는 중...</div>`;
+
+      const { data: profiles } = await supabase.from("profiles").select("id, display_name");
+      const nameMap = {};
+      if (profiles) profiles.forEach(p => nameMap[p.id] = p.display_name || "");
+
+      const { data, error } = await supabase
+        .from("reading_logs")
+        .select("user_id, date")
+        .eq("book_title", currentBookTitle)
+        .order("date", { ascending: false })
+        .limit(500);
+
+      if (error) {
+        console.error("대시보드 데이터 오류:", error);
+        container.innerHTML = `<div class="muted">대시보드 데이터를 불러오지 못했습니다.</div>`;
+        return;
+      }
+      if (!data || data.length === 0) {
+        container.innerHTML = `<div class="muted">아직 기록된 데이터가 없어 요약을 보여줄 수 없습니다.</div>`;
+        return;
+      }
+
+      let filtered = data;
+      const todayStr = todayISO();
+      const todayDate = new Date(todayStr);
+
+      if (currentSeason?.start && currentSeason?.end) {
+        try {
+          const start = new Date(currentSeason.start);
+          const end = new Date(currentSeason.end);
+          filtered = data.filter(r => {
+            const d = new Date(r.date);
+            return d >= start && d <= end;
+          });
+        } catch {}
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="muted">설정된 시즌 안에 해당하는 데이터가 없습니다.</div>`;
+        return;
+      }
+
+      const todayUsers = new Set();
+      const last7Users = new Set();
+      const allUsers = new Set();
+      const countsByUser = {};
+      const sevenAgo = new Date(todayDate.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+      filtered.forEach(r => {
+        if (!r.user_id) return;
+        allUsers.add(r.user_id);
+        countsByUser[r.user_id] = (countsByUser[r.user_id] || 0) + 1;
+        if (r.date === todayStr) todayUsers.add(r.user_id);
+        const d = new Date(r.date);
+        if (d >= sevenAgo && d <= todayDate) last7Users.add(r.user_id);
+      });
+
+      const topMembers = Object.entries(countsByUser)
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0,3)
+        .map(([uid,count]) => ({ name: nameMap[uid] || "익명 멤버", count }));
+
+      container.innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">오늘 기록한 멤버 수</div><div class="stat-value">${todayUsers.size}</div></div>
+          <div class="stat-card"><div class="stat-label">최근 7일 기록한 멤버 수</div><div class="stat-value">${last7Users.size}</div></div>
+          <div class="stat-card"><div class="stat-label">${currentSeason ? "총 기록 수 (이번 시즌)" : "총 기록 수"}</div><div class="stat-value">${filtered.length}</div></div>
+          <div class="stat-card"><div class="stat-label">${currentSeason ? "이번 시즌 참여 멤버 수" : "참여한 총 멤버 수"}</div><div class="stat-value">${allUsers.size}</div></div>
+        </div>
+        <div style="margin-top:0.8rem;">
+          <div class="stat-label">가장 활발한 멤버</div>
+          ${topMembers.length ? `<ul class="mini-list">${topMembers.map(m=>`<li>${safeText(m.name)} – ${m.count}회</li>`).join("")}</ul>` : `<div class="muted">데이터가 부족합니다.</div>`}
+        </div>
+      `;
+    }
+
+    function fillSettingsForm() {
+      const bookInput = document.getElementById("settingBookTitleInput");
+      const seasonNameInput = document.getElementById("settingSeasonNameInput");
+      const seasonStartInput = document.getElementById("settingSeasonStartInput");
+      const seasonEndInput = document.getElementById("settingSeasonEndInput");
+      if (bookInput) bookInput.value = currentBookTitle || "";
+      if (seasonNameInput) seasonNameInput.value = currentSeason?.name || "";
+      if (seasonStartInput) seasonStartInput.value = currentSeason?.start || "";
+      if (seasonEndInput) seasonEndInput.value = currentSeason?.end || "";
+    }
+
+    async function saveClubSettings(user) {
+      const statusEl = document.getElementById("settingsStatus");
+      const newBookTitle = (document.getElementById("settingBookTitleInput").value || "").trim() || DEFAULT_BOOK_TITLE;
+      const seasonName = (document.getElementById("settingSeasonNameInput").value || "").trim();
+      const seasonStart = (document.getElementById("settingSeasonStartInput").value || "").trim();
+      const seasonEnd = (document.getElementById("settingSeasonEndInput").value || "").trim();
+
+      const updates = [{ key: "current_book", value: { title: newBookTitle } }];
+      if (seasonName || (seasonStart && seasonEnd)) {
+        updates.push({ key: "season", value: { name: seasonName || "", start: seasonStart || "", end: seasonEnd || "" } });
+      }
+
+      const { error } = await supabase.from("club_settings").upsert(updates, { onConflict: "key" });
+      if (error) {
+        console.error("클럽 설정 저장 오류:", error);
+        statusEl.textContent = "클럽 설정 저장 중 오류가 발생했습니다.";
+        return;
+      }
+
+      statusEl.textContent = "클럽 설정이 저장되었습니다.";
+      await loadClubSettings();
+
+      document.getElementById("currentBookLabel").textContent = currentBookTitle;
+      document.getElementById("caseBookLabel").textContent = currentBookTitle;
+      document.getElementById("dashboardBookLabel").textContent = currentBookTitle;
+
+      if (currentSeason?.name) {
+        document.getElementById("seasonLabel").textContent = ` · 시즌: ${currentSeason.name} (${currentSeason.start||""} ~ ${currentSeason.end||""})`;
+      } else {
+        document.getElementById("seasonLabel").textContent = "";
+      }
+
+      const session = await getSession();
+      if (session?.user) {
+        await loadTodayLog(session.user);
+        await loadRecentLogs(session.user);
+        await loadClubLogs(true);
+        await loadCaseList(session.user);
+      }
+      await loadDashboard();
+    }
+
+    
+    // ===== Club Filters (A: server-side) =====
+    async function ensureClubProfilesLoaded() {
+      if (clubProfilesCache) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name");
+
+      if (error) {
+        console.error("프로필(멤버) 목록 불러오기 오류:", error);
+        clubProfilesCache = [];
+        clubProfileMap = {};
+        return;
+      }
+
+      clubProfilesCache = data || [];
+      clubProfileMap = {};
+      clubProfilesCache.forEach(p => {
+        clubProfileMap[p.id] = p.display_name || "";
+      });
+
+      fillMemberSelect("clubLogMember");
+      fillMemberSelect("clubCaseMember");
+    }
+
+    function fillMemberSelect(selectId) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+      const current = sel.value || "";
+      sel.innerHTML = `<option value="">전체 멤버</option>`;
+      (clubProfilesCache || []).forEach(p => {
+        const name = p.display_name || "(이름 없음)";
+        sel.innerHTML += `<option value="${safeText(p.id)}">${safeText(name)}</option>`;
+      });
+      sel.value = current;
+    }
+
+    function readClubFiltersFromUI() {
+      // logs
+      const logKw = document.getElementById("clubLogKeyword");
+      const logMember = document.getElementById("clubLogMember");
+      clubFilters.logs.keyword = (logKw ? logKw.value : "").trim();
+      clubFilters.logs.member = (logMember ? logMember.value : "").trim();
+
+      // cases
+      const caseKw = document.getElementById("clubCaseKeyword");
+      const caseMember = document.getElementById("clubCaseMember");
+      clubFilters.cases.keyword = (caseKw ? caseKw.value : "").trim();
+      clubFilters.cases.member = (caseMember ? caseMember.value : "").trim();
+    }
+
+    function attachClubFilterHandlers() {
+      const logKw = document.getElementById("clubLogKeyword");
+      const logMember = document.getElementById("clubLogMember");
+      const logReset = document.getElementById("clubLogResetBtn");
+      const logMore = document.getElementById("clubLogsMoreBtn");
+
+      const caseKw = document.getElementById("clubCaseKeyword");
+      const caseMember = document.getElementById("clubCaseMember");
+      const caseReset = document.getElementById("clubCaseResetBtn");
+      const caseMore = document.getElementById("clubCasesMoreBtn");
+
+      const scheduleReload = () => {
+        clearTimeout(_clubFilterTimer);
+        _clubFilterTimer = setTimeout(() => {
+          loadClubLogs(true);
+          loadClubCases(true);
+        }, 250);
+      };
+
+      if (logKw) logKw.addEventListener("input", scheduleReload);
+      if (logMember) logMember.addEventListener("change", () => loadClubLogs(true));
+      if (logReset) logReset.addEventListener("click", () => {
+        if (logKw) logKw.value = "";
+        if (logMember) logMember.value = "";
+        loadClubLogs(true);
+      });
+      if (logMore) logMore.addEventListener("click", () => loadClubLogs(false));
+
+      if (caseKw) caseKw.addEventListener("input", scheduleReload);
+      if (caseMember) caseMember.addEventListener("change", () => loadClubCases(true));
+      if (caseReset) caseReset.addEventListener("click", () => {
+        if (caseKw) caseKw.value = "";
+        if (caseMember) caseMember.value = "";
+        loadClubCases(true);
+      });
+      if (caseMore) caseMore.addEventListener("click", () => loadClubCases(false));
+    }
+
+    async function loadClubLogs(reset = false) {
+      const listEl = document.getElementById("clubLogsList");
+      const moreBtn = document.getElementById("clubLogsMoreBtn");
+      const statusEl = document.getElementById("clubLogsMoreStatus");
+      if (!listEl) return;
+
+      if (clubLogsLoading) return;
+      clubLogsLoading = true;
+
+      try {
+        await ensureClubProfilesLoaded();
+        readClubFiltersFromUI();
+
+        if (reset) {
+          clubLogsPage = 0;
+          clubLogsHasMore = true;
+          listEl.innerHTML = "";
+          if (statusEl) statusEl.textContent = "";
+        }
+
+        if (!clubLogsHasMore) {
+          if (statusEl) statusEl.textContent = "더 불러올 기록이 없습니다.";
+          if (moreBtn) moreBtn.style.display = "none";
+          return;
+        }
+
+        if (moreBtn) {
+          moreBtn.disabled = true;
+          moreBtn.textContent = "불러오는 중...";
+          moreBtn.style.display = "block";
+        }
+
+        let q = supabase
+          .from("reading_logs")
+          .select("*")
+          .eq("book_title", currentBookTitle)
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false });
+
+        if (clubFilters.logs.member) {
+          q = q.eq("user_id", clubFilters.logs.member);
+        }
+
+        if (clubFilters.logs.keyword) {
+          const kw = clubFilters.logs.keyword.replace(/%/g, "\\%").replace(/_/g, "\\_");
+          q = q.or(
+            `section.ilike.%${kw}%,key_points.ilike.%${kw}%,quote.ilike.%${kw}%,reflection.ilike.%${kw}%`
+          );
+        }
+
+        const from = clubLogsPage * CLUB_LOGS_PAGE_SIZE;
+        const to = from + CLUB_LOGS_PAGE_SIZE - 1;
+
+        const { data, error } = await q.range(from, to);
+
+        if (error) {
+          console.error("클럽 기록 불러오기 오류:", error);
+          listEl.innerHTML = `<div class="muted">클럽 기록을 불러오지 못했습니다.</div>`;
+          if (moreBtn) moreBtn.style.display = "none";
+          return;
+        }
+
+        const rows = data || [];
+        if (rows.length === 0 && reset) {
+          listEl.innerHTML = `<div class="muted">조건에 맞는 클럽 기록이 없습니다.</div>`;
+          if (moreBtn) moreBtn.style.display = "none";
+          return;
+        }
+
+        rows.forEach(row => {
+          const displayName = clubProfileMap[row.user_id] || "익명 멤버";
+          const div = document.createElement("div");
+          div.className = "log-item";
+          div.innerHTML = `
+            <div class="log-head">
+              <span>${formatDate(row.date)} · ${safeText(displayName)}</span>
+              <span class="pill">${safeText(row.section || "범위 미기입")}</span>
+            </div>
+            <div class="log-mainline">${safeHtmlWithBreaks(row.key_points || "")}</div>
+            ${row.quote ? `<div class="log-quote"><span class="muted">오늘의 한 문장</span><br>${safeHtmlWithBreaks(row.quote)}</div>` : ""}
+            <div style="margin-top:0.35rem;">
+              <button class="secondary" data-open-log="${safeText(row.id)}">자세히 보기</button>
+            </div>
+          `;
+          listEl.appendChild(div);
+        });
+
+        // 자세히 보기 버튼 핸들러
+        listEl.querySelectorAll("[data-open-log]").forEach(btn => {
+          btn.onclick = () => openLogDetails(btn.getAttribute("data-open-log"));
+        });
+
+        if (rows.length < CLUB_LOGS_PAGE_SIZE) {
+          clubLogsHasMore = false;
+          if (statusEl) statusEl.textContent = "마지막 페이지입니다.";
+          if (moreBtn) moreBtn.style.display = "none";
+        } else {
+          clubLogsPage += 1;
+          if (statusEl) statusEl.textContent = "";
+          if (moreBtn) moreBtn.style.display = "block";
+        }
+      } finally {
+        clubLogsLoading = false;
+        const moreBtn = document.getElementById("clubLogsMoreBtn");
+        if (moreBtn) {
+          moreBtn.disabled = false;
+          moreBtn.textContent = "더 보기";
+        }
+      }
+    }
+
+    async function loadClubCases(reset = false) {
+      const listEl = document.getElementById("clubCaseList");
+      const moreBtn = document.getElementById("clubCasesMoreBtn");
+      const statusEl = document.getElementById("clubCasesMoreStatus");
+      if (!listEl) return;
+
+      if (clubCasesLoading) return;
+      clubCasesLoading = true;
+
+      try {
+        await ensureClubProfilesLoaded();
+        readClubFiltersFromUI();
+
+        if (reset) {
+          clubCasesPage = 0;
+          clubCasesHasMore = true;
+          listEl.innerHTML = "";
+          if (statusEl) statusEl.textContent = "";
+        }
+
+        if (!clubCasesHasMore) {
+          if (statusEl) statusEl.textContent = "더 불러올 케이스가 없습니다.";
+          if (moreBtn) moreBtn.style.display = "none";
+          return;
+        }
+
+        if (moreBtn) {
+          moreBtn.disabled = true;
+          moreBtn.textContent = "불러오는 중...";
+          moreBtn.style.display = "block";
+        }
+
+        let q = supabase
+          .from("case_notes")
+          .select("*")
+          .eq("book_title", currentBookTitle)
+          .order("created_at", { ascending: false });
+
+        if (clubFilters.cases.member) {
+          q = q.eq("user_id", clubFilters.cases.member);
+        }
+
+        if (clubFilters.cases.keyword) {
+          const kw = clubFilters.cases.keyword.replace(/%/g, "\\%").replace(/_/g, "\\_");
+          q = q.or(
+            `company.ilike.%${kw}%,section.ilike.%${kw}%,summary.ilike.%${kw}%,what_went_well.ilike.%${kw}%,what_went_bad.ilike.%${kw}%,lesson.ilike.%${kw}%,my_action.ilike.%${kw}%`
+          );
+        }
+
+        const from = clubCasesPage * CLUB_CASES_PAGE_SIZE;
+        const to = from + CLUB_CASES_PAGE_SIZE - 1;
+
+        const { data, error } = await q.range(from, to);
+
+        if (error) {
+          console.error("클럽 케이스 불러오기 오류:", error);
+          listEl.innerHTML = `<div class="muted">클럽 케이스를 불러오지 못했습니다.</div>`;
+          if (moreBtn) moreBtn.style.display = "none";
+          return;
+        }
+
+        const rows = data || [];
+        if (rows.length === 0 && reset) {
+          listEl.innerHTML = `<div class="muted">조건에 맞는 클럽 케이스가 없습니다.</div>`;
+          if (moreBtn) moreBtn.style.display = "none";
+          return;
+        }
+
+        rows.forEach(row => {
+          const displayName = clubProfileMap[row.user_id] || "익명 멤버";
+          const div = document.createElement("div");
+          div.className = "log-item";
+          const dateLabel = row.created_at ? formatDate(row.created_at) : "";
+          div.innerHTML = `
+            <div class="log-head">
+              <span>${safeText(dateLabel)} · ${safeText(displayName)}</span>
+              <span class="pill">${safeText(row.company || "기업 미기입")}</span>
+            </div>
+            <div class="log-mainline">${safeHtmlWithBreaks(row.summary || "")}</div>
+            <div style="margin-top:0.35rem;">
+              <button class="secondary" data-open-case="${safeText(row.id)}">자세히 보기</button>
+            </div>
+          `;
+          listEl.appendChild(div);
+        });
+
+        listEl.querySelectorAll("[data-open-case]").forEach(btn => {
+          btn.onclick = () => openCaseDetails(btn.getAttribute("data-open-case"));
+        });
+
+        if (rows.length < CLUB_CASES_PAGE_SIZE) {
+          clubCasesHasMore = false;
+          if (statusEl) statusEl.textContent = "마지막 페이지입니다.";
+          if (moreBtn) moreBtn.style.display = "none";
+        } else {
+          clubCasesPage += 1;
+          if (statusEl) statusEl.textContent = "";
+          if (moreBtn) moreBtn.style.display = "block";
+        }
+      } finally {
+        clubCasesLoading = false;
+        const moreBtn = document.getElementById("clubCasesMoreBtn");
+        if (moreBtn) {
+          moreBtn.disabled = false;
+          moreBtn.textContent = "더 보기";
+        }
+      }
+    }
+
+(async () => {
+      wireModalEvents();
+      await loadClubSettings();
+
+      supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          await loadClubSettings();
+          await renderApp(session.user);
+        } else {
+          renderLogin();
+        }
+      });
+
+      const session = await getSession();
+      if (session?.user) {
+        await renderApp(session.user);
+      } else {
+        renderLogin();
+      }
+    })();
+  </script>
+</body>
+</html>
