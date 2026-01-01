@@ -693,6 +693,16 @@
       if (seasonLabel) seasonLabel.textContent = "";
     }
 
+    // today form dirty tracking
+        todayFormDirty = false;
+        ["sectionInput","keyPointsInput","quoteInput","reflectionInput"].forEach(id => {
+              const el = $(id);
+              if (!el) return;
+                  el.addEventListener("input", () => {
+                    todayFormDirty = true;
+                  }, { passive: true });
+        });
+      
     // wire actions
     $("dateInput").value = todayISO();
     $("saveTodayBtn").onclick = saveTodayLog;
