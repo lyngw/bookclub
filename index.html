@@ -485,15 +485,6 @@
       </section>
 
       <section class="card" data-section="today" id="todaySection">
-      // today form dirty tracking
-        todayFormDirty = false;
-        ["sectionInput","keyPointsInput","quoteInput","reflectionInput"].forEach(id => {
-              const el = $(id);
-              if (!el) return;
-                  el.addEventListener("input", () => {
-                    todayFormDirty = true;
-                  }, { passive: true });
-        });
         <h2>오늘의 독서 기록</h2>
         <div class="subtitle">
           오늘 <b>${escapeHtml(currentBookTitle)}</b>에서 읽은 내용을 정리해 보세요. (자동으로 오늘 날짜로 저장됩니다.)
