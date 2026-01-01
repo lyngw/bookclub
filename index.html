@@ -125,11 +125,14 @@
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ====== STATE ======
+  let appBooted = false;
   let currentBookTitle = DEFAULT_BOOK_TITLE;
   let currentSeason = null;   // { id, name, start, end }
   let sessionUser = null;
   let isAdmin = false;
   let profileName = "";
+  let todayFormDirty = false;
+  let todayLoadSeq = 0;
 
   // ====== HELPERS ======
   const $ = (id) => document.getElementById(id);
@@ -482,6 +485,15 @@
       </section>
 
       <section class="card" data-section="today" id="todaySection">
+      // today form dirty tracking
+        todayFormDirty = false;
+        ["sectionInput","keyPointsInput","quoteInput","reflectionInput"].forEach(id => {
+              const el = $(id);
+              if (!el) return;
+                  el.addEventListener("input", () => {
+                    todayFormDirty = true;
+                  }, { passive: true });
+        });
         <h2>오늘의 독서 기록</h2>
         <div class="subtitle">
           오늘 <b>${escapeHtml(currentBookTitle)}</b>에서 읽은 내용을 정리해 보세요. (자동으로 오늘 날짜로 저장됩니다.)
@@ -738,6 +750,7 @@ if (isAdmin) {
 
   // ====== DATA: TODAY LOG ======
   async function loadTodayLog() {
+    const seq = ++todayLoadSeq;
     setStatus("saveStatus", "불러오는 중...");
     try {
       const today = todayISO();
@@ -755,6 +768,15 @@ if (isAdmin) {
         setStatus("saveStatus", "오늘 기록을 불러오지 못했습니다.");
         return;
       }
+
+      // 최신 호출 아니면 무시
+        if (seq !== todayLoadSeq) return;
+
+        // 사용자가 입력 중이면 덮어쓰기 금지
+        if (todayFormDirty) {
+          setStatus("saveStatus", "입력 중입니다. 자동 로딩으로 덮어쓰지 않습니다.");
+          return;
+        }
 
       if (data) {
         $("sectionInput").value = data.section || "";
@@ -1422,18 +1444,24 @@ if (isAdmin) {
 
     renderUserArea();
     renderApp();
+    appBooted = true;
   }
 
   // Handle auth changes (so redirect returns properly)
   supabase.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_IN" && session?.user) {
-      // refresh app after kakao redirect
-      boot();
+  if (event === "SIGNED_IN" && session?.user) {
+    if (appBooted) {
+      console.warn("Auth event ignored: app already booted");
+      return;
     }
+    boot();
+    }
+
     if (event === "SIGNED_OUT") {
-      renderLogin();
+        appBooted = false;
+        renderLogin();
     }
-  });
+   });
 
   boot();
 })();</script>
