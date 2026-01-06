@@ -1313,7 +1313,7 @@ if (isAdmin) {
         if (d >= sevenAgo && d <= todayDate) last7Users.add(uid);
       });
 
-      const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([uid,c])=>({ uid, name: nameMap[uid] || "멤버", c }));
+      const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([uid,c])=>({ uid, name: nameMap[uid] || "멤버", c }));
 
       container.innerHTML = `
         <div class="logs-list" style="gap:.45rem;">
