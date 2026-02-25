@@ -475,6 +475,100 @@
     .comment-submit-btn:disabled{ opacity: .55; cursor: default; }
     .comment-empty{ font-size: .82rem; color: var(--text-muted); }
 
+    /* ====== Toast Notification ====== */
+    #toastContainer{
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.25rem;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      pointer-events: none;
+    }
+    .toast-item{
+      background: var(--text-primary);
+      color: var(--bg-card);
+      border-radius: 16px;
+      padding: .75rem 1.1rem;
+      font-size: .85rem;
+      line-height: 1.45;
+      max-width: 300px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      pointer-events: auto;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .toast-item.show{
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast-item .toast-title{
+      font-weight: 700;
+      margin-bottom: .18rem;
+    }
+    .toast-item .toast-body{
+      opacity: .8;
+      font-size: .82rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    /* ====== Unread Badge ====== */
+    .notif-badge{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      background: #e74c3c;
+      color: #fff;
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 0 .35rem;
+      margin-left: .35rem;
+      vertical-align: middle;
+      line-height: 1;
+    }
+
+    /* ====== Unread Banner ====== */
+    #unreadBanner{
+      display: none;
+      align-items: center;
+      gap: .6rem;
+      background: var(--accent-light);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: .6rem 1rem;
+      font-size: .84rem;
+      color: var(--accent-text);
+      margin-bottom: .8rem;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #unreadBanner:hover{ background: #f0ddd1; }
+    #unreadBanner .banner-icon{ font-size: 1.1rem; }
+    #unreadBanner .banner-text{ flex: 1; font-weight: 500; }
+    #unreadBanner .banner-close{
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--accent-text);
+      font-size: 1rem;
+      padding: 0;
+      opacity: .6;
+    }
+    #unreadBanner .banner-close:hover{ opacity: 1; }
+
+    @media (prefers-color-scheme: dark){
+      #unreadBanner:hover{ background: rgba(212,137,106,.25); }
+    }
+
     /* Dark Mode - Warm Sepia Tones */
     @media (prefers-color-scheme: dark) {
       :root{
@@ -537,8 +631,15 @@
 </div>
 <div class="chip-row" id="userArea"></div>
 </header>
+<div id="unreadBanner">
+  <span class="banner-icon">💬</span>
+  <span class="banner-text" id="unreadBannerText">새 댓글이 있습니다</span>
+  <button class="banner-close" id="unreadBannerClose" title="닫기">✕</button>
+</div>
 <main id="content"></main>
 </div>
+<!-- Toast Container -->
+<div id="toastContainer"></div>
 <!-- Modal -->
 <div aria-hidden="true" id="modalBackdrop">
 <div aria-labelledby="modalTitle" aria-modal="true" class="modal" role="dialog">
@@ -588,6 +689,10 @@
   // Filter state for logs
   let myLogBookFilter = ""; // "" = 전체, 또는 특정 책 제목
   let clubLogBookFilter = "";
+
+  // Notification state
+  let commentSubscription = null;   // Realtime 구독 객체
+  let lastSeenAt = null;            // 마지막으로 댓글 확인한 시각 (ISO string, localStorage)
 
   // ====== HELPERS ======
   const $ = (id) => document.getElementById(id);
@@ -888,8 +993,10 @@
     const logoutBtn = $("logoutBtn");
     if (logoutBtn) {
       logoutBtn.onclick = async () => {
+        unsubscribeComments();
         await supabase.auth.signOut();
         sessionUser = null;
+        lastSeenAt = null;
         renderLogin();
       };
     }
@@ -1417,6 +1524,177 @@
     }
 
     return div;
+  }
+
+  // ====== NOTIFICATIONS ======
+
+  function showToast({ title, body, onClick }) {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+
+    const el = document.createElement("div");
+    el.className = "toast-item";
+    el.innerHTML = `
+      <div class="toast-title">${escapeHtml(title)}</div>
+      ${body ? `<div class="toast-body">${escapeHtml(body)}</div>` : ""}
+    `;
+    if (onClick) el.onclick = onClick;
+
+    container.appendChild(el);
+    // 애니메이션 트리거
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => el.classList.add("show"));
+    });
+
+    // 5초 후 자동 제거
+    setTimeout(() => {
+      el.classList.remove("show");
+      setTimeout(() => el.remove(), 300);
+    }, 5000);
+  }
+
+  function saveLastSeenAt() {
+    const now = new Date().toISOString();
+    lastSeenAt = now;
+    try { localStorage.setItem("notif_last_seen_" + sessionUser.id, now); } catch {}
+  }
+
+  function loadLastSeenAt() {
+    try {
+      lastSeenAt = localStorage.getItem("notif_last_seen_" + sessionUser.id) || null;
+    } catch {
+      lastSeenAt = null;
+    }
+  }
+
+  function updateUnreadBanner(count) {
+    const banner = document.getElementById("unreadBanner");
+    const text   = document.getElementById("unreadBannerText");
+    if (!banner || !text) return;
+
+    if (count > 0) {
+      text.textContent = `내 기록에 새 댓글이 ${count}개 있어요`;
+      banner.style.display = "flex";
+
+      // 배너 클릭 → 로그 탭으로 이동 + 확인 처리
+      banner.onclick = (e) => {
+        if (e.target.id === "unreadBannerClose") return;
+        // 기록 보기 탭 활성화
+        const logsTab = document.querySelector('[data-tab="logs"]');
+        if (logsTab) logsTab.click();
+        dismissUnreadBanner();
+      };
+
+      const closeBtn = document.getElementById("unreadBannerClose");
+      if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); dismissUnreadBanner(); };
+    } else {
+      banner.style.display = "none";
+    }
+  }
+
+  function dismissUnreadBanner() {
+    saveLastSeenAt();
+    updateUnreadBanner(0);
+  }
+
+  // 부팅 시 미확인 댓글 조회
+  async function checkUnreadComments() {
+    if (!sessionUser) return;
+    loadLastSeenAt();
+
+    try {
+      // 내 기록 ID 목록 조회
+      const { data: myLogs, error: logsErr } = await supabase
+        .from("reading_logs")
+        .select("id")
+        .eq("user_id", sessionUser.id);
+
+      if (logsErr || !myLogs || myLogs.length === 0) return;
+
+      const myLogIds = myLogs.map(r => r.id);
+
+      // 내 기록에 달린 댓글 중, 본인이 쓴 댓글 제외, lastSeenAt 이후 것만
+      let q = supabase
+        .from("comments")
+        .select("id", { count: "exact", head: true })
+        .in("log_id", myLogIds)
+        .neq("user_id", sessionUser.id);
+
+      if (lastSeenAt) {
+        q = q.gt("created_at", lastSeenAt);
+      }
+
+      const { count, error } = await q;
+      if (error) { console.warn("checkUnreadComments error:", error); return; }
+
+      updateUnreadBanner(count || 0);
+    } catch (e) {
+      console.warn("checkUnreadComments exception:", e);
+    }
+  }
+
+  // Realtime 구독 — 앱 열려있는 동안 실시간 토스트
+  async function subscribeComments() {
+    if (commentSubscription) {
+      supabase.removeChannel(commentSubscription);
+      commentSubscription = null;
+    }
+
+    // 내 기록 ID 목록 조회
+    const { data: myLogs } = await supabase
+      .from("reading_logs")
+      .select("id")
+      .eq("user_id", sessionUser.id);
+
+    const myLogIds = new Set((myLogs || []).map(r => r.id));
+    if (myLogIds.size === 0) return;
+
+    const nameMap = await loadProfilesMap();
+
+    commentSubscription = supabase
+      .channel("comments-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "comments" },
+        (payload) => {
+          const c = payload.new;
+          // 내 기록에 달린 댓글이고, 내가 쓴 것이 아닐 때만
+          if (!myLogIds.has(c.log_id)) return;
+          if (c.user_id === sessionUser.id) return;
+
+          const authorName = nameMap[c.user_id] || "멤버";
+          const preview = (c.content || "").slice(0, 50);
+
+          showToast({
+            title: `💬 ${authorName}님이 댓글을 달았어요`,
+            body: preview,
+            onClick: () => {
+              // 해당 기록 모달 열기
+              openLogDetails(c.log_id);
+              saveLastSeenAt();
+              updateUnreadBanner(0);
+            }
+          });
+
+          // 배너도 +1 업데이트
+          const banner = document.getElementById("unreadBanner");
+          const text   = document.getElementById("unreadBannerText");
+          if (banner && text) {
+            const cur = parseInt(text.dataset.count || "0") + 1;
+            text.dataset.count = cur;
+            text.textContent = `내 기록에 새 댓글이 ${cur}개 있어요`;
+            banner.style.display = "flex";
+          }
+        }
+      )
+      .subscribe();
+  }
+
+  function unsubscribeComments() {
+    if (commentSubscription) {
+      supabase.removeChannel(commentSubscription);
+      commentSubscription = null;
+    }
   }
 
   // ====== COMMENTS ======
@@ -2066,6 +2344,11 @@
     renderUserArea();
     renderApp();
     setupArchiveScroll();
+
+    // 알림: 부팅 시 미확인 댓글 확인 + Realtime 구독
+    await checkUnreadComments();
+    subscribeComments();
+
     appBooted = true;
   }
 
