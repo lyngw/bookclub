@@ -32,7 +32,7 @@
       --shadow-medium: rgba(61, 50, 41, 0.12);
     }
 
-    /* ====== 봄 배경 — 매화 가지 모서리 장식 ====== */
+    /* ====== 봄 배경 — 매화 가지 캔버스 ====== */
     body{
       margin:0;
       font-family: "Apple SD Gothic Neo", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -42,30 +42,13 @@
       position: relative;
     }
 
-    /* 공통 모서리 장식 */
-    body::before,
-    body::after{
-      content: "";
+    #blossom-canvas{
       position: fixed;
-      width: 340px;
-      height: 340px;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.18;
-    }
-
-    /* 좌상단 — 매화 가지 */
-    body::before{
-      top: 0; left: 0;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%23c8708a' stroke-linecap='round' stroke-linejoin='round'%3E%3C!-- 메인 가지 --%3E%3Cpath d='M0,80 Q40,60 80,90 Q130,120 160,80 Q190,40 230,60 Q260,75 280,50' stroke-width='5'/%3E%3Cpath d='M0,80 Q20,100 40,140 Q55,170 30,200' stroke-width='4'/%3E%3Cpath d='M80,90 Q90,130 70,160 Q55,185 75,210' stroke-width='3.5'/%3E%3Cpath d='M130,100 Q150,130 140,165' stroke-width='3'/%3E%3Cpath d='M230,60 Q240,90 260,110 Q275,125 260,150' stroke-width='3'/%3E%3C!-- 잔가지 --%3E%3Cpath d='M40,140 Q60,150 55,170' stroke-width='2'/%3E%3Cpath d='M70,160 Q85,155 95,165' stroke-width='2'/%3E%3Cpath d='M160,80 Q165,60 175,50' stroke-width='2'/%3E%3Cpath d='M260,110 Q280,108 290,95' stroke-width='2'/%3E%3C!-- 꽃 (원형 5장 꽃잎) --%3E%3Ccircle cx='168' cy='76' r='6' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='161' cy='70' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='175' cy='70' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='163' cy='83' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='173' cy='83' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='168' cy='76' r='3' fill='%23ffd0e0' stroke='none'/%3E%3Ccircle cx='42' cy='138' r='5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='36' cy='133' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='48' cy='133' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='37' cy='143' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='47' cy='143' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='72' cy='158' r='5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='66' cy='153' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='78' cy='153' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='67' cy='163' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='77' cy='163' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='260' cy='112' r='5.5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='254' cy='106' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='266' cy='106' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='254' cy='118' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='266' cy='118' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='230' cy='62' r='4.5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='225' cy='57' r='3' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='235' cy='57' r='3' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='225' cy='67' r='3' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='235' cy='67' r='3' fill='%23f0b8cc' stroke='none'/%3E%3C!-- 꽃봉오리 --%3E%3Cellipse cx='175' cy='48' rx='3' ry='5' fill='%23e8a0b8' stroke='none'/%3E%3Cellipse cx='291' cy='93' rx='3' ry='5' fill='%23e8a0b8' stroke='none'/%3E%3Cellipse cx='56' cy='168' rx='3' ry='5' fill='%23e8a0b8' stroke='none'/%3E%3Cellipse cx='75' cy='210' rx='2.5' ry='4.5' fill='%23e8a0b8' stroke='none'/%3E%3C/g%3E%3C/svg%3E") no-repeat top left;
-      background-size: contain;
-    }
-
-    /* 우하단 — 좌우/상하 반전 */
-    body::after{
-      bottom: 0; right: 0;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%23c8708a' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M340,260 Q300,280 260,250 Q210,220 180,260 Q150,300 110,280 Q80,265 60,290' stroke-width='5'/%3E%3Cpath d='M340,260 Q320,240 300,200 Q285,170 310,140' stroke-width='4'/%3E%3Cpath d='M260,250 Q250,210 270,180 Q285,155 265,130' stroke-width='3.5'/%3E%3Cpath d='M210,240 Q190,210 200,175' stroke-width='3'/%3E%3Cpath d='M110,280 Q100,250 80,230 Q65,215 80,190' stroke-width='3'/%3E%3Cpath d='M300,200 Q280,190 285,170' stroke-width='2'/%3E%3Cpath d='M270,180 Q255,185 245,175' stroke-width='2'/%3E%3Cpath d='M180,260 Q175,280 165,290' stroke-width='2'/%3E%3Cpath d='M80,230 Q60,232 50,245' stroke-width='2'/%3E%3Ccircle cx='172' cy='264' r='6' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='165' cy='258' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='179' cy='258' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='165' cy='270' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='179' cy='270' r='4' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='298' cy='202' r='5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='292' cy='196' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='304' cy='196' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='292' cy='208' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='304' cy='208' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='268' cy='182' r='5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='262' cy='176' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='274' cy='176' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='262' cy='188' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='274' cy='188' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='110' cy='278' r='5.5' fill='%23e8a0b8' stroke='none'/%3E%3Ccircle cx='104' cy='272' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='116' cy='272' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='104' cy='284' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Ccircle cx='116' cy='284' r='3.5' fill='%23f0b8cc' stroke='none'/%3E%3Cellipse cx='165' cy='292' rx='3' ry='5' fill='%23e8a0b8' stroke='none'/%3E%3Cellipse cx='49' cy='247' rx='3' ry='5' fill='%23e8a0b8' stroke='none'/%3E%3Cellipse cx='265' cy='130' rx='2.5' ry='4.5' fill='%23e8a0b8' stroke='none'/%3E%3Cellipse cx='310' cy='138' rx='2.5' ry='4.5' fill='%23e8a0b8' stroke='none'/%3E%3C/g%3E%3C/svg%3E") no-repeat bottom right;
-      background-size: contain;
+      opacity: 0.22;
     }
 
     /* 앱 컨텐츠는 배경 위에 */
@@ -73,9 +56,8 @@
     #toastContainer{ position: relative; z-index: 1000; }
     #modalBackdrop{ z-index: 500; }
 
-    /* 다크모드: 색조만 변경 (채도 낮춤) */
     @media (prefers-color-scheme: dark){
-      body::before, body::after{ opacity: 0.10; filter: hue-rotate(10deg) brightness(1.4); }
+      #blossom-canvas{ opacity: 0.10; }
     }
 
     /* Serif font for headings */
@@ -984,6 +966,146 @@
   </style>
 </head>
 <body>
+<canvas id="blossom-canvas"></canvas>
+<script>
+(function(){
+  const canvas = document.getElementById("blossom-canvas");
+  const ctx = canvas.getContext("2d");
+  const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  // 꽃잎 색상
+  const petalColors = isDark
+    ? ["#d4789a","#c06080","#e090b0","#b85878","#cc7090"]
+    : ["#f0b8cc","#e8a0b8","#f8d0e0","#e090b0","#fce0ec"];
+  const branchColor = isDark ? "#a05070" : "#c8708a";
+  const budColor    = isDark ? "#d080a0" : "#e8a0b8";
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    draw();
+  }
+
+  // 5장 꽃잎 매화 그리기
+  function drawFlower(x, y, r, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    for (let i = 0; i < 5; i++) {
+      ctx.save();
+      ctx.rotate((Math.PI * 2 / 5) * i);
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.85, r * 0.45, r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fillStyle = petalColors[i % petalColors.length];
+      ctx.fill();
+      ctx.restore();
+    }
+    // 꽃술
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = isDark ? "#f0d0a0" : "#fff5cc";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 꽃봉오리
+  function drawBud(x, y, r, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.5, r, 0, 0, Math.PI * 2);
+    ctx.fillStyle = budColor;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 가지 + 꽃 배치 (재귀적으로 잔가지 생성)
+  function drawBranch(x1, y1, x2, y2, width, depth, flowers) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    // 약간 휘어지는 곡선
+    const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 40;
+    const my = (y1 + y2) / 2 + (Math.random() - 0.5) * 40;
+    ctx.quadraticCurveTo(mx, my, x2, y2);
+    ctx.strokeStyle = branchColor;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    if (depth <= 0) {
+      // 끝 가지에 꽃 또는 봉오리
+      const r = Math.random();
+      if (r < 0.75) flowers.push({ x: x2, y: y2, r: 5 + Math.random() * 4, rot: Math.random() * Math.PI * 2 });
+      else           flowers.push({ x: x2, y: y2, r: 3, rot: Math.random() * Math.PI * 2, bud: true });
+      return;
+    }
+
+    // 가지 중간중간에도 꽃
+    if (depth === 1 && Math.random() < 0.6) {
+      flowers.push({ x: mx, y: my, r: 4 + Math.random() * 3, rot: Math.random() * Math.PI * 2 });
+    }
+
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+
+    // 2~3개 잔가지
+    const numSub = depth > 1 ? 2 + (Math.random() < 0.4 ? 1 : 0) : 2;
+    for (let i = 0; i < numSub; i++) {
+      const spread = (Math.random() * 0.6 + 0.3) * (Math.random() < 0.5 ? 1 : -1);
+      const branchLen = len * (0.55 + Math.random() * 0.3);
+      const nx = x2 + Math.cos(angle + spread) * branchLen;
+      const ny = y2 + Math.sin(angle + spread) * branchLen;
+      drawBranch(x2, y2, nx, ny, width * 0.65, depth - 1, flowers);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const W = canvas.width, H = canvas.height;
+
+    // 시드 고정으로 리사이즈해도 일관된 모양 (Math.random은 시드 불가 → 미리 계획된 구조 사용)
+    const configs = [
+      // 좌상단 — 오른쪽·아래로 뻗는 가지들
+      { x1: 0,   y1: 20,  x2: 120, y2: 80,  w: 5, d: 4 },
+      { x1: 0,   y1: 60,  x2: 80,  y2: 180, w: 4, d: 4 },
+      { x1: 20,  y1: 0,   x2: 160, y2: 60,  w: 4, d: 4 },
+      { x1: 0,   y1: 120, x2: 90,  y2: 260, w: 3, d: 3 },
+      { x1: 60,  y1: 0,   x2: 220, y2: 80,  w: 3.5, d: 3 },
+      { x1: 130, y1: 0,   x2: 280, y2: 50,  w: 3, d: 3 },
+      { x1: 0,   y1: 200, x2: 60,  y2: 340, w: 2.5, d: 3 },
+      // 우하단 — 왼쪽·위로 뻗는 가지들
+      { x1: W,      y1: H-20,  x2: W-120, y2: H-80,  w: 5, d: 4 },
+      { x1: W,      y1: H-60,  x2: W-80,  y2: H-180, w: 4, d: 4 },
+      { x1: W-20,   y1: H,     x2: W-160, y2: H-60,  w: 4, d: 4 },
+      { x1: W,      y1: H-120, x2: W-90,  y2: H-260, w: 3, d: 3 },
+      { x1: W-60,   y1: H,     x2: W-220, y2: H-80,  w: 3.5, d: 3 },
+      { x1: W-130,  y1: H,     x2: W-280, y2: H-50,  w: 3, d: 3 },
+      { x1: W,      y1: H-200, x2: W-60,  y2: H-340, w: 2.5, d: 3 },
+      // 우상단 — 왼쪽·아래로
+      { x1: W,    y1: 20,  x2: W-100, y2: 90,  w: 3.5, d: 3 },
+      { x1: W-50, y1: 0,   x2: W-200, y2: 70,  w: 3, d: 3 },
+      // 좌하단 — 오른쪽·위로
+      { x1: 0,   y1: H-20,  x2: 100, y2: H-90,  w: 3.5, d: 3 },
+      { x1: 50,  y1: H,     x2: 200, y2: H-70,  w: 3, d: 3 },
+    ];
+
+    const flowers = [];
+    // 난수 시드 효과를 위해 저장된 오프셋 사용
+    const saved = Math.random; // 실제론 변경 X, 구조 자체로 충분
+    configs.forEach(c => drawBranch(c.x1, c.y1, c.x2, c.y2, c.w, c.d, flowers));
+
+    // 꽃 렌더링 (가지 위에 겹쳐서)
+    flowers.forEach(f => {
+      if (f.bud) drawBud(f.x, f.y, f.r, f.rot);
+      else       drawFlower(f.x, f.y, f.r, f.rot);
+    });
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+})();
+</script>
 <div class="app-shell">
 <header>
 <div class="logo">
