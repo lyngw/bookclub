@@ -973,133 +973,110 @@
   const ctx = canvas.getContext("2d");
   const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  // 꽃잎 색상
-  const petalColors = isDark
-    ? ["#d4789a","#c06080","#e090b0","#b85878","#cc7090"]
-    : ["#f0b8cc","#e8a0b8","#f8d0e0","#e090b0","#fce0ec"];
-  const branchColor = isDark ? "#a05070" : "#c8708a";
-  const budColor    = isDark ? "#d080a0" : "#e8a0b8";
-
-  function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    draw();
+  // 시드 기반 난수 (리사이즈해도 꽃 위치 고정)
+  let _seed = 20260225;
+  function rnd() {
+    _seed = (_seed * 1664525 + 1013904223) & 0xffffffff;
+    return ((_seed >>> 0) / 0xffffffff);
   }
 
-  // 5장 꽃잎 매화 그리기
-  function drawFlower(x, y, r, rotation) {
+  // 꽃잎 색상 팔레트 (연한 봄 핑크)
+  const palettes = isDark
+    ? ["#d4789a","#c06080","#e090b0","#b85878","#cc7090","#e0a0c0","#d060a0"]
+    : ["#f0b8cc","#e8a0b8","#f8d0e0","#e090b0","#fce0ec","#f4c0d8","#fad8e8","#eeaac8","#f5c8dc"];
+  const stamColors = isDark
+    ? ["#f0d080","#e8c870","#f8e090"]
+    : ["#fff8cc","#fff0aa","#fffde0"];
+
+  // 5장 꽃잎 매화
+  function drawFlower(x, y, r, rot) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(rotation);
+    ctx.rotate(rot);
     for (let i = 0; i < 5; i++) {
       ctx.save();
       ctx.rotate((Math.PI * 2 / 5) * i);
       ctx.beginPath();
-      ctx.ellipse(0, -r * 0.85, r * 0.45, r * 0.7, 0, 0, Math.PI * 2);
-      ctx.fillStyle = petalColors[i % petalColors.length];
+      ctx.ellipse(0, -r * 0.82, r * 0.42, r * 0.68, 0, 0, Math.PI * 2);
+      ctx.fillStyle = palettes[Math.floor(rnd() * palettes.length)];
       ctx.fill();
       ctx.restore();
     }
     // 꽃술
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
-    ctx.fillStyle = isDark ? "#f0d0a0" : "#fff5cc";
+    ctx.arc(0, 0, r * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = stamColors[Math.floor(rnd() * stamColors.length)];
     ctx.fill();
     ctx.restore();
   }
 
-  // 꽃봉오리
-  function drawBud(x, y, r, rotation) {
+  // 꽃봉오리 (작은 타원)
+  function drawBud(x, y, r, rot) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(rotation);
+    ctx.rotate(rot);
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.5, r, 0, 0, Math.PI * 2);
-    ctx.fillStyle = budColor;
+    ctx.ellipse(0, 0, r * 0.45, r * 0.85, 0, 0, Math.PI * 2);
+    ctx.fillStyle = palettes[Math.floor(rnd() * palettes.length)];
     ctx.fill();
     ctx.restore();
   }
 
-  // 가지 + 꽃 배치 (재귀적으로 잔가지 생성)
-  function drawBranch(x1, y1, x2, y2, width, depth, flowers) {
+  // 낙화 꽃잎 (한 장, 타원)
+  function drawPetal(x, y, r, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    // 약간 휘어지는 곡선
-    const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 40;
-    const my = (y1 + y2) / 2 + (Math.random() - 0.5) * 40;
-    ctx.quadraticCurveTo(mx, my, x2, y2);
-    ctx.strokeStyle = branchColor;
-    ctx.lineWidth = width;
-    ctx.lineCap = "round";
-    ctx.stroke();
+    ctx.ellipse(0, 0, r * 0.38, r * 0.62, 0, 0, Math.PI * 2);
+    ctx.fillStyle = palettes[Math.floor(rnd() * palettes.length)];
+    ctx.fill();
+    ctx.restore();
+  }
 
-    if (depth <= 0) {
-      // 끝 가지에 꽃 또는 봉오리
-      const r = Math.random();
-      if (r < 0.75) flowers.push({ x: x2, y: y2, r: 5 + Math.random() * 4, rot: Math.random() * Math.PI * 2 });
-      else           flowers.push({ x: x2, y: y2, r: 3, rot: Math.random() * Math.PI * 2, bud: true });
-      return;
-    }
+  // 꽃 데이터 미리 생성 (시드 기반으로 고정)
+  let flowers = [];
+  function generateFlowers(W, H) {
+    _seed = 20260225; // 항상 같은 시드로 리셋
+    flowers = [];
+    const TOTAL = 280; // 전체 꽃+봉오리+낱잎 수
 
-    // 가지 중간중간에도 꽃
-    if (depth === 1 && Math.random() < 0.6) {
-      flowers.push({ x: mx, y: my, r: 4 + Math.random() * 3, rot: Math.random() * Math.PI * 2 });
-    }
+    for (let i = 0; i < TOTAL; i++) {
+      const x = rnd() * W;
+      const y = rnd() * H;
+      const type = rnd(); // 0~0.55: 꽃, 0.55~0.75: 봉오리, 0.75~1: 낱잎
+      const rot  = rnd() * Math.PI * 2;
 
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-
-    // 2~3개 잔가지
-    const numSub = depth > 1 ? 2 + (Math.random() < 0.4 ? 1 : 0) : 2;
-    for (let i = 0; i < numSub; i++) {
-      const spread = (Math.random() * 0.6 + 0.3) * (Math.random() < 0.5 ? 1 : -1);
-      const branchLen = len * (0.55 + Math.random() * 0.3);
-      const nx = x2 + Math.cos(angle + spread) * branchLen;
-      const ny = y2 + Math.sin(angle + spread) * branchLen;
-      drawBranch(x2, y2, nx, ny, width * 0.65, depth - 1, flowers);
+      if (type < 0.55) {
+        // 꽃: 다양한 사이즈
+        const r = 5 + rnd() * 16; // 5~21px
+        flowers.push({ kind: "flower", x, y, r, rot });
+      } else if (type < 0.75) {
+        // 봉오리: 작게
+        const r = 4 + rnd() * 7; // 4~11px
+        flowers.push({ kind: "bud", x, y, r, rot });
+      } else {
+        // 낱잎: 중간 크기
+        const r = 4 + rnd() * 10; // 4~14px
+        flowers.push({ kind: "petal", x, y, r, rot });
+      }
     }
   }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const W = canvas.width, H = canvas.height;
-
-    // 시드 고정으로 리사이즈해도 일관된 모양 (Math.random은 시드 불가 → 미리 계획된 구조 사용)
-    const configs = [
-      // 좌상단 — 오른쪽·아래로 뻗는 가지들
-      { x1: 0,   y1: 20,  x2: 120, y2: 80,  w: 5, d: 4 },
-      { x1: 0,   y1: 60,  x2: 80,  y2: 180, w: 4, d: 4 },
-      { x1: 20,  y1: 0,   x2: 160, y2: 60,  w: 4, d: 4 },
-      { x1: 0,   y1: 120, x2: 90,  y2: 260, w: 3, d: 3 },
-      { x1: 60,  y1: 0,   x2: 220, y2: 80,  w: 3.5, d: 3 },
-      { x1: 130, y1: 0,   x2: 280, y2: 50,  w: 3, d: 3 },
-      { x1: 0,   y1: 200, x2: 60,  y2: 340, w: 2.5, d: 3 },
-      // 우하단 — 왼쪽·위로 뻗는 가지들
-      { x1: W,      y1: H-20,  x2: W-120, y2: H-80,  w: 5, d: 4 },
-      { x1: W,      y1: H-60,  x2: W-80,  y2: H-180, w: 4, d: 4 },
-      { x1: W-20,   y1: H,     x2: W-160, y2: H-60,  w: 4, d: 4 },
-      { x1: W,      y1: H-120, x2: W-90,  y2: H-260, w: 3, d: 3 },
-      { x1: W-60,   y1: H,     x2: W-220, y2: H-80,  w: 3.5, d: 3 },
-      { x1: W-130,  y1: H,     x2: W-280, y2: H-50,  w: 3, d: 3 },
-      { x1: W,      y1: H-200, x2: W-60,  y2: H-340, w: 2.5, d: 3 },
-      // 우상단 — 왼쪽·아래로
-      { x1: W,    y1: 20,  x2: W-100, y2: 90,  w: 3.5, d: 3 },
-      { x1: W-50, y1: 0,   x2: W-200, y2: 70,  w: 3, d: 3 },
-      // 좌하단 — 오른쪽·위로
-      { x1: 0,   y1: H-20,  x2: 100, y2: H-90,  w: 3.5, d: 3 },
-      { x1: 50,  y1: H,     x2: 200, y2: H-70,  w: 3, d: 3 },
-    ];
-
-    const flowers = [];
-    // 난수 시드 효과를 위해 저장된 오프셋 사용
-    const saved = Math.random; // 실제론 변경 X, 구조 자체로 충분
-    configs.forEach(c => drawBranch(c.x1, c.y1, c.x2, c.y2, c.w, c.d, flowers));
-
-    // 꽃 렌더링 (가지 위에 겹쳐서)
     flowers.forEach(f => {
-      if (f.bud) drawBud(f.x, f.y, f.r, f.rot);
-      else       drawFlower(f.x, f.y, f.r, f.rot);
+      if      (f.kind === "flower") drawFlower(f.x, f.y, f.r, f.rot);
+      else if (f.kind === "bud")    drawBud(f.x, f.y, f.r, f.rot);
+      else                          drawPetal(f.x, f.y, f.r, f.rot);
     });
+  }
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    generateFlowers(canvas.width, canvas.height);
+    draw();
   }
 
   resize();
