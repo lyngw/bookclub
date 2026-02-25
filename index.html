@@ -967,10 +967,9 @@
       tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
       sections.forEach(s => s.classList.toggle("section-hidden", s.dataset.section !== name));
 
-      // 아카이브 탭 활성화 시 데이터 로드
-      if (name === "archive") {
-        loadArchivedBooks();
-      }
+      if (name === "my-logs")   loadMyLogs();
+      if (name === "club-logs") loadClubLogs();
+      if (name === "archive")   loadArchivedBooks();
     };
 
     tabs.forEach(t => t.addEventListener("click", () => activate(t.dataset.tab)));
@@ -1035,7 +1034,8 @@
       <nav class="tabs">
         <button class="tab" data-tab="profile">프로필</button>
         <button class="tab" data-tab="today">오늘 기록</button>
-        <button class="tab" data-tab="logs">기록 보기</button>
+        <button class="tab" data-tab="my-logs">나의 기록</button>
+        <button class="tab" data-tab="club-logs">클럽 기록</button>
         <button class="tab" data-tab="archive">아카이브</button>
         <button class="tab" data-tab="dashboard">대시보드</button>
         ${isAdmin ? `<button class="tab" data-tab="admin">관리자</button>` : ``}
@@ -1088,44 +1088,42 @@
         <div class="muted" id="saveStatus"></div>
       </section>
 
-      <section data-section="logs" id="logsSection">
-        <section class="card">
-          <h2>나의 기록</h2>
-          <div class="subtitle">현재 시즌의 최근 기록을 불러오고, 클릭하면 전체 내용을 확인할 수 있어요.</div>
-          <div class="filters">
-            <div class="field">
-              <label>책 필터</label>
-              <select id="myLogBookFilter">
-                <option value="">전체 책</option>
-                ${currentBooks.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
-              </select>
-            </div>
-            <div class="field">
-              <label>검색</label>
-              <input id="myLogSearch" type="text" placeholder="키워드 (범위/요약/문장/느낀점)" />
-            </div>
+      <section class="card section-hidden" data-section="my-logs" id="myLogsSection">
+        <h2>나의 기록</h2>
+        <div class="subtitle">현재 시즌의 내 기록을 불러와요. 클릭하면 전체 내용을 확인할 수 있어요.</div>
+        <div class="filters">
+          <div class="field">
+            <label>책 필터</label>
+            <select id="myLogBookFilter">
+              <option value="">전체 책</option>
+              ${currentBooks.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
+            </select>
           </div>
-          <div id="myLogsList" class="logs-list"></div>
-        </section>
+          <div class="field">
+            <label>검색</label>
+            <input id="myLogSearch" type="text" placeholder="키워드 (범위/요약/문장/느낀점)" />
+          </div>
+        </div>
+        <div id="myLogsList" class="logs-list"></div>
+      </section>
 
-        <section class="card">
-          <h2>클럽 기록</h2>
-          <div class="subtitle">현재 시즌의 멤버들 최근 기록을 함께 봐요. (클릭하면 전체 보기)</div>
-          <div class="filters">
-            <div class="field">
-              <label>책 필터</label>
-              <select id="clubLogBookFilter">
-                <option value="">전체 책</option>
-                ${currentBooks.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
-              </select>
-            </div>
-            <div class="field">
-              <label>검색</label>
-              <input id="clubLogSearch" type="text" placeholder="키워드 (범위/요약/문장/느낀점)" />
-            </div>
+      <section class="card section-hidden" data-section="club-logs" id="clubLogsSection">
+        <h2>클럽 기록</h2>
+        <div class="subtitle">현재 시즌의 멤버들 기록을 함께 봐요. 클릭하면 전체 내용을 확인할 수 있어요.</div>
+        <div class="filters">
+          <div class="field">
+            <label>책 필터</label>
+            <select id="clubLogBookFilter">
+              <option value="">전체 책</option>
+              ${currentBooks.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
+            </select>
           </div>
-          <div id="clubLogsList" class="logs-list"></div>
-        </section>
+          <div class="field">
+            <label>검색</label>
+            <input id="clubLogSearch" type="text" placeholder="키워드 (범위/요약/문장/느낀점)" />
+          </div>
+        </div>
+        <div id="clubLogsList" class="logs-list"></div>
       </section>
 
       <section class="card" data-section="archive" id="archiveSection">
@@ -1320,8 +1318,6 @@
 
     // initial loads
     loadTodayLog();
-    loadMyLogs();
-    loadClubLogs();
     loadDashboard();
   }
 
@@ -1579,8 +1575,8 @@
       // 배너 클릭 → 로그 탭으로 이동 + 확인 처리
       banner.onclick = (e) => {
         if (e.target.id === "unreadBannerClose") return;
-        // 기록 보기 탭 활성화
-        const logsTab = document.querySelector('[data-tab="logs"]');
+        // 나의 기록 탭 활성화
+        const logsTab = document.querySelector('[data-tab="my-logs"]');
         if (logsTab) logsTab.click();
         dismissUnreadBanner();
       };
