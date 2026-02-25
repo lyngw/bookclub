@@ -292,6 +292,22 @@
 
     .log-sub{ margin-top: .3rem; font-size: .85rem; white-space: pre-wrap; color: var(--text-secondary); }
 
+    .comment-count-chip{
+      display: inline-flex;
+      align-items: center;
+      gap: .2rem;
+      font-size: .7rem;
+      color: var(--text-muted);
+      margin-left: .4rem;
+      vertical-align: middle;
+      opacity: .85;
+    }
+    .comment-count-chip.has-comments{
+      color: var(--accent-text);
+      font-weight: 600;
+      opacity: 1;
+    }
+
     .item-actions{ margin-top: .65rem; display: flex; gap: .45rem; flex-wrap: wrap; justify-content: flex-end; }
 
     .edit-link{
@@ -1803,6 +1819,25 @@
     loadDashboard();
   }
 
+  // ====== DATA: COMMENT COUNT MAP ======
+  // logIds 배열에 대한 댓글 수 { logId: count } 반환
+  async function loadCommentCountMap(logIds) {
+    const map = {};
+    if (!logIds || logIds.length === 0) return map;
+    try {
+      const { data, error } = await supabase
+        .from("comments")
+        .select("log_id")
+        .in("log_id", logIds);
+      if (!error && data) {
+        data.forEach(c => {
+          map[c.log_id] = (map[c.log_id] || 0) + 1;
+        });
+      }
+    } catch (e) {}
+    return map;
+  }
+
   // ====== DATA: PROFILES MAP ======
   async function loadProfilesMap() {
     const map = {};
@@ -1937,8 +1972,10 @@
       return;
     }
 
+    const commentCountMap = await loadCommentCountMap(data.map(r => r.id));
+
     listEl.innerHTML = "";
-    data.forEach(row => listEl.appendChild(renderLogCard(row, { scope: "mine" })));
+    data.forEach(row => listEl.appendChild(renderLogCard(row, { scope: "mine", commentCountMap })));
   }
 
   async function loadClubLogs() {
@@ -1988,8 +2025,10 @@
       return;
     }
 
+    const commentCountMap = await loadCommentCountMap(data.map(r => r.id));
+
     listEl.innerHTML = "";
-    data.forEach(row => listEl.appendChild(renderLogCard(row, { scope: "club", nameMap, rankMap })));
+    data.forEach(row => listEl.appendChild(renderLogCard(row, { scope: "club", nameMap, rankMap, commentCountMap })));
   }
 
   function renderLogCard(row, opts={}) {
@@ -2016,10 +2055,20 @@
     const preview = keypoints || row.quote || "";
     const previewHtml = safeHtmlWithBreaks(preview);
 
+    // 댓글 수
+    const commentCountMap = opts.commentCountMap || {};
+    const cCount = commentCountMap[row.id] || 0;
+    const commentChipHtml = !isArchive
+      ? `<span class="comment-count-chip${cCount > 0 ? " has-comments" : ""}">💬 ${cCount}</span>`
+      : "";
+
     div.innerHTML = `
       <div class="log-head">
         <span>${escapeHtml(headLeft)}${rankBadgeHtml}${canEdit ? ` <a href="#" class="edit-link" data-act="edit">수정</a>` : ''}</span>
-        <span class="pill${isArchive ? ' archive' : ''}">${escapeHtml(section)}</span>
+        <span style="display:inline-flex;align-items:center;gap:.35rem;">
+          ${commentChipHtml}
+          <span class="pill${isArchive ? ' archive' : ''}">${escapeHtml(section)}</span>
+        </span>
       </div>
       <div class="log-mainline" data-act="details" style="cursor:pointer;">${previewHtml || `<span class="muted">(내용 없음)</span>`}</div>
     `;
