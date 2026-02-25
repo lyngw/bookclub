@@ -395,6 +395,86 @@
     /* button, input adjustments */
     #myLogApply,#clubLogApply{ width: 100%; padding: .5rem .85rem; font-size: .85rem; }
 
+    /* ====== Comments ====== */
+    .comment-section{
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--border-light);
+    }
+    .comment-section-title{
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: .6rem;
+      letter-spacing: .03em;
+    }
+    .comment-list{ display: flex; flex-direction: column; gap: .5rem; margin-bottom: .75rem; }
+    .comment-item{
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: .55rem .8rem;
+      font-size: .85rem;
+      position: relative;
+    }
+    .comment-meta{
+      font-size: .75rem;
+      color: var(--text-muted);
+      margin-bottom: .25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .comment-author{ font-weight: 600; color: var(--text-secondary); }
+    .comment-body{ color: var(--text-primary); white-space: pre-wrap; line-height: 1.5; }
+    .comment-delete-btn{
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: .72rem;
+      color: var(--text-muted);
+      padding: 0;
+      margin-left: auto;
+      opacity: .65;
+      transition: opacity .15s;
+    }
+    .comment-delete-btn:hover{ opacity: 1; color: #e74c3c; }
+    .comment-form{ display: flex; gap: .5rem; align-items: flex-end; margin-top: .3rem; }
+    .comment-form textarea{
+      flex: 1;
+      min-height: 52px;
+      resize: none;
+      font-size: .85rem;
+      border-radius: 12px;
+      padding: .5rem .7rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: inherit;
+      line-height: 1.45;
+    }
+    .comment-form textarea:focus{
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    .comment-submit-btn{
+      border: none;
+      border-radius: 12px;
+      padding: .5rem .85rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .2s;
+      flex-shrink: 0;
+    }
+    .comment-submit-btn:hover{ background: var(--accent-hover); }
+    .comment-submit-btn:disabled{ opacity: .55; cursor: default; }
+    .comment-empty{ font-size: .82rem; color: var(--text-muted); }
+
     /* Dark Mode - Warm Sepia Tones */
     @media (prefers-color-scheme: dark) {
       :root{
@@ -1339,6 +1419,91 @@
     return div;
   }
 
+  // ====== COMMENTS ======
+  async function loadComments(logId) {
+    const listEl = document.getElementById(`commentList-${logId}`);
+    if (!listEl) return;
+    listEl.innerHTML = `<div class="comment-empty">불러오는 중...</div>`;
+
+    const nameMap = await loadProfilesMap();
+
+    const { data, error } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("log_id", logId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("loadComments error:", error);
+      listEl.innerHTML = `<div class="comment-empty">댓글을 불러오지 못했습니다.</div>`;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      listEl.innerHTML = `<div class="comment-empty">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</div>`;
+      return;
+    }
+
+    listEl.innerHTML = "";
+    data.forEach(c => {
+      const isMine = c.user_id === sessionUser.id;
+      const authorName = escapeHtml(nameMap[c.user_id] || "멤버");
+      const timeStr = new Date(c.created_at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" });
+      const div = document.createElement("div");
+      div.className = "comment-item";
+      div.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-author">${authorName}</span>
+          <span>${timeStr}</span>
+          ${isMine ? `<button class="comment-delete-btn" data-cid="${c.id}" title="삭제">✕ 삭제</button>` : ""}
+        </div>
+        <div class="comment-body">${safeHtmlWithBreaks(c.content)}</div>
+      `;
+      if (isMine) {
+        div.querySelector(".comment-delete-btn").onclick = () => deleteComment(c.id, logId);
+      }
+      listEl.appendChild(div);
+    });
+  }
+
+  async function submitComment(logId) {
+    const textarea = document.getElementById(`commentInput-${logId}`);
+    const btn = document.getElementById(`commentSubmit-${logId}`);
+    const content = (textarea?.value || "").trim();
+    if (!content) return;
+
+    btn.disabled = true;
+    btn.textContent = "저장 중...";
+
+    const { error } = await supabase.from("comments").insert({
+      log_id: logId,
+      user_id: sessionUser.id,
+      content
+    });
+
+    btn.disabled = false;
+    btn.textContent = "등록";
+
+    if (error) {
+      console.error("submitComment error:", error);
+      alert("댓글 저장에 실패했습니다.");
+      return;
+    }
+    textarea.value = "";
+    await loadComments(logId);
+  }
+
+  async function deleteComment(commentId, logId) {
+    if (!confirm("댓글을 삭제하시겠습니까?")) return;
+    const { error } = await supabase.from("comments").delete().eq("id", commentId).eq("user_id", sessionUser.id);
+    if (error) {
+      console.error("deleteComment error:", error);
+      alert("삭제에 실패했습니다.");
+      return;
+    }
+    await loadComments(logId);
+  }
+
   async function openLogDetails(arg) {
     let row = arg;
     if (typeof arg === "string") {
@@ -1356,6 +1521,20 @@
     }
     if (!row) return;
 
+    const logId = row.id;
+    const commentSectionHtml = `
+      <div class="comment-section">
+        <div class="comment-section-title">💬 댓글</div>
+        <div class="comment-list" id="commentList-${logId}">
+          <div class="comment-empty">불러오는 중...</div>
+        </div>
+        <div class="comment-form">
+          <textarea id="commentInput-${logId}" placeholder="댓글을 입력하세요… (Ctrl+Enter로 등록)" rows="2"></textarea>
+          <button class="comment-submit-btn" id="commentSubmit-${logId}">등록</button>
+        </div>
+      </div>
+    `;
+
     openModal({
       title: "독서 기록 상세",
       subtitle: `${formatDate(row.date)} · ${escapeHtml(row.book_title || selectedBookTitle)}`,
@@ -1365,8 +1544,23 @@
         { label:"오늘의 한 문장", value: row.quote || "" },
         { label:"느낀 점/적용", value: row.reflection || "" }
       ],
-      footerHtml: ""
+      footerHtml: commentSectionHtml
     });
+
+    await loadComments(logId);
+
+    const submitBtn = document.getElementById(`commentSubmit-${logId}`);
+    if (submitBtn) submitBtn.onclick = () => submitComment(logId);
+
+    const textarea = document.getElementById(`commentInput-${logId}`);
+    if (textarea) {
+      textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          submitComment(logId);
+        }
+      });
+    }
   }
 
   function openLogEdit(row) {
