@@ -648,6 +648,103 @@
     /* 클럽 기록 카드 내 작은 등급 뱃지 */
     .log-rank{ margin-left: .3rem; vertical-align: middle; }
 
+    /* ====== 멤버 관리 ====== */
+    .member-row{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      padding: .7rem .9rem;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      margin-bottom: .5rem;
+    }
+    .member-row-info{
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .member-row-name{
+      font-weight: 600;
+      font-size: .9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .member-row-meta{
+      font-size: .75rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .member-status-badge{
+      font-size: .72rem;
+      font-weight: 700;
+      padding: .18rem .55rem;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .member-status-badge.active{
+      background: #e8fde8;
+      color: #2d7a2d;
+      border: 1px solid #b0e0b0;
+    }
+    .member-status-badge.inactive{
+      background: #fde8e8;
+      color: #9a2d2d;
+      border: 1px solid #e0b0b0;
+    }
+    .member-toggle-btn{
+      font-size: .78rem;
+      padding: .3rem .8rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .member-toggle-btn:hover{
+      background: var(--accent-light);
+      color: var(--accent-text);
+      border-color: var(--accent);
+    }
+    .member-toggle-btn.deactivate:hover{
+      background: #fde8e8;
+      color: #9a2d2d;
+      border-color: #e0b0b0;
+    }
+    .inactive-overlay{
+      padding: .5rem .75rem;
+      border-radius: 10px;
+      background: #fde8e8;
+      border: 1px solid #f5c5c5;
+      color: #9a2d2d;
+      font-size: .8rem;
+      margin-bottom: .8rem;
+      display: none;
+    }
+    @media (prefers-color-scheme: dark){
+      .member-status-badge.active{
+        background: rgba(45,122,45,.2);
+        color: #7ec87e;
+        border-color: rgba(45,122,45,.35);
+      }
+      .member-status-badge.inactive{
+        background: rgba(154,45,45,.2);
+        color: #f07070;
+        border-color: rgba(154,45,45,.35);
+      }
+      .inactive-overlay{
+        background: rgba(154,45,45,.15);
+        border-color: rgba(154,45,45,.35);
+        color: #f07070;
+      }
+    }
+
     @media (prefers-color-scheme: dark){
       .rank-seed   { background: rgba(74,124,63,.15);  color: #7ec870; border-color: rgba(74,124,63,.3); }
       .rank-reader { background: rgba(44,95,168,.15);  color: #7aaaf5; border-color: rgba(44,95,168,.3); }
@@ -784,6 +881,9 @@
   // Notification state
   let commentSubscription = null;   // Realtime 구독 객체
   let lastSeenAt = null;            // 마지막으로 댓글 확인한 시각 (ISO string, localStorage)
+
+  // 시즌 참여 상태 (null = 기록 없음 → 기본 활성)
+  let mySeasonActive = true;
 
   // ====== HELPERS ======
   const $ = (id) => document.getElementById(id);
@@ -1062,6 +1162,7 @@
       if (name === "my-logs")   loadMyLogs();
       if (name === "club-logs") loadClubLogs();
       if (name === "archive")   loadArchivedBooks();
+      if (name === "admin" && isAdmin) loadMemberManager();
     };
 
     tabs.forEach(t => t.addEventListener("click", () => activate(t.dataset.tab)));
@@ -1205,6 +1306,9 @@
       <section class="card section-hidden" data-section="club-logs" id="clubLogsSection">
         <h2>클럽 기록</h2>
         <div class="subtitle">현재 시즌의 멤버들 기록을 함께 봐요. 클릭하면 전체 내용을 확인할 수 있어요.</div>
+        <div class="inactive-overlay" id="inactiveOverlay">
+          ⚠️ 현재 시즌에 참여하지 않는 상태입니다. 내 기록만 표시됩니다. 새 시즌 참여를 원하면 관리자에게 문의하세요.
+        </div>
         <div class="filters">
           <div class="field">
             <label>책 필터</label>
@@ -1310,6 +1414,14 @@
             </div>
           </div>
         </div>
+
+        <div style="margin-top:1.5rem;">
+          <h2 style="margin-top:0.2rem;">멤버 시즌 참여 관리</h2>
+          <div class="subtitle">
+            새 시즌에 참여하지 않는 멤버를 <b>비활성</b>으로 설정하면, 해당 멤버는 클럽 기록에서 보이지 않고 자신이 참여했던 시즌의 기록만 볼 수 있습니다.
+          </div>
+          <div id="memberManagerList" class="logs-list" style="margin-top:.8rem;"></div>
+        </div>
       </section>
       ` : ``}
     `;
@@ -1407,6 +1519,7 @@
       $("addBookBtn").onclick = addBookToList;
       $("addAdminBtn").onclick = addAdminUser;
       loadAdminList();
+      loadMemberManager();
     }
 
     setupTabs();
@@ -1554,14 +1667,21 @@
     if (!listEl) return;
     listEl.innerHTML = `<div class="muted">불러오는 중...</div>`;
 
+    // 비활성 멤버 안내 배너
+    const overlay = $("inactiveOverlay");
+    if (overlay) overlay.style.display = mySeasonActive ? "none" : "block";
+
     const search = ($("clubLogSearch")?.value || "").trim();
     const bookFilter = clubLogBookFilter;
+
+    // 비활성 멤버는 자기 기록만 조회
+    const onlyMine = !mySeasonActive;
 
     const [nameMap, rankMap] = await Promise.all([loadProfilesMap(), loadRankMap()]);
 
     const { data, error } = await applyLogQuery(
       supabase.from("reading_logs").select("*"),
-      { search, onlyMine: false, bookFilter }
+      { search, onlyMine, bookFilter }
     );
 
     if (error) {
@@ -2153,11 +2273,10 @@
     selectEl.innerHTML = `<option value="">불러오는 중...</option>`;
 
     try {
-      // 모든 reading_logs에서 고유한 book_title, season_id 조합 가져오기
-      const { data, error } = await supabase
-        .from("reading_logs")
-        .select("book_title, season_id")
-        .eq("archived", false);
+      // 비활성 멤버는 자기 기록만 기준으로 아카이브 목록 표시
+      let q = supabase.from("reading_logs").select("book_title, season_id").eq("archived", false);
+      if (!mySeasonActive) q = q.eq("user_id", sessionUser.id);
+      const { data, error } = await q;
 
       if (error) {
         console.error("loadArchivedBooks error:", error);
@@ -2221,11 +2340,15 @@
 
     const nameMap = await loadProfilesMap();
 
+    // 비활성 멤버: 항상 자기 기록만 볼 수 있음
+    // (아카이브도 드롭다운이 자기 기록 기준으로만 채워지므로 일관성 유지)
+    const onlyMine = !mySeasonActive;
+
     const { data, error } = await applyLogQuery(
       supabase.from("reading_logs").select("*"),
       {
         search: "",
-        onlyMine: false,
+        onlyMine,
         bookTitle: selectedArchive.book_title,
         seasonId: selectedArchive.season_id,
         useCurrentSeason: false,
@@ -2544,6 +2667,114 @@
     loadAdminList();
   }
 
+  // ====== 멤버 시즌 참여 관리 ======
+
+  async function loadMemberManager() {
+    const el = $("memberManagerList");
+    if (!el) return;
+    el.innerHTML = `<div class="muted">불러오는 중...</div>`;
+
+    const seasonId = seasonIdOrNull();
+    if (!seasonId) {
+      el.innerHTML = `<div class="muted">현재 설정된 시즌이 없습니다. 시즌 ID를 먼저 설정해 주세요.</div>`;
+      return;
+    }
+
+    try {
+      // 모든 프로필 + 현재 시즌 참여 상태 병렬 조회
+      const [profilesRes, membersRes] = await Promise.all([
+        supabase.from("profiles").select("id, display_name").order("display_name"),
+        supabase.from("season_members").select("user_id, is_active").eq("season_id", seasonId)
+      ]);
+
+      if (profilesRes.error) throw profilesRes.error;
+
+      const profiles = profilesRes.data || [];
+      if (profiles.length === 0) {
+        el.innerHTML = `<div class="muted">등록된 멤버가 없습니다.</div>`;
+        return;
+      }
+
+      // season_members 맵 { user_id: is_active }
+      const memberStatusMap = {};
+      (membersRes.data || []).forEach(r => { memberStatusMap[r.user_id] = r.is_active; });
+
+      el.innerHTML = "";
+      profiles.forEach(p => {
+        // 레코드 없으면 기본 활성
+        const isActive = (p.id in memberStatusMap) ? memberStatusMap[p.id] : true;
+        const name = escapeHtml(p.display_name || "이름 없음");
+        const statusLabel = isActive ? "참여 중" : "미참여";
+        const statusClass = isActive ? "active" : "inactive";
+        const btnLabel = isActive ? "비활성으로 설정" : "활성으로 설정";
+        const btnClass = isActive ? "deactivate" : "";
+
+        const row = document.createElement("div");
+        row.className = "member-row";
+        row.innerHTML = `
+          <div class="member-row-info">
+            <span class="member-row-name">${name}</span>
+            <span class="member-row-meta">${p.id.slice(0,8)}…</span>
+          </div>
+          <span class="member-status-badge ${statusClass}">${statusLabel}</span>
+          <button class="member-toggle-btn ${btnClass}" data-uid="${p.id}" data-active="${isActive}">${btnLabel}</button>
+        `;
+        row.querySelector(".member-toggle-btn").onclick = () => toggleMemberActive(p.id, isActive, p.display_name || "멤버");
+        el.appendChild(row);
+      });
+    } catch (e) {
+      console.error("loadMemberManager error:", e);
+      el.innerHTML = `<div class="muted">멤버 목록을 불러오지 못했습니다.</div>`;
+    }
+  }
+
+  async function toggleMemberActive(userId, currentlyActive, displayName) {
+    const seasonId = seasonIdOrNull();
+    if (!seasonId) { alert("시즌 ID가 설정되어 있지 않습니다."); return; }
+
+    const nextActive = !currentlyActive;
+    const actionLabel = nextActive ? "활성(참여 중)" : "비활성(미참여)";
+    if (!confirm(`${displayName} 님을 '${actionLabel}'으로 변경하시겠습니까?`)) return;
+
+    // upsert: 레코드가 있으면 업데이트, 없으면 삽입
+    const { error } = await supabase
+      .from("season_members")
+      .upsert(
+        { user_id: userId, season_id: seasonId, is_active: nextActive },
+        { onConflict: "user_id,season_id" }
+      );
+
+    if (error) {
+      console.error("toggleMemberActive error:", error);
+      alert("변경에 실패했습니다: " + error.message);
+      return;
+    }
+
+    // 관리자 목록 새로고침
+    await loadMemberManager();
+    // 클럽 기록도 갱신
+    if ($("clubLogsList")) await loadClubLogs();
+  }
+
+  // 부팅 시 내 시즌 참여 상태 로드
+  async function loadMySeasonStatus() {
+    const seasonId = seasonIdOrNull();
+    if (!seasonId || !sessionUser) { mySeasonActive = true; return; }
+    try {
+      const { data, error } = await supabase
+        .from("season_members")
+        .select("is_active")
+        .eq("user_id", sessionUser.id)
+        .eq("season_id", seasonId)
+        .maybeSingle();
+
+      // 레코드 없으면 기본 활성
+      mySeasonActive = (data == null) ? true : data.is_active;
+    } catch (e) {
+      mySeasonActive = true;
+    }
+  }
+
   async function loadAdminList() {
     const el = $("adminList");
     if (!el) return;
@@ -2588,6 +2819,8 @@
     await checkAdmin(sessionUser);
 
     renderUserArea();
+    // 시즌 참여 상태 로드 후 renderApp (클럽 기록 필터링에 필요)
+    await loadMySeasonStatus();
     renderApp();
     setupArchiveScroll();
 
