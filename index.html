@@ -2647,7 +2647,13 @@
     }
 
     statusEl.textContent = "저장 완료!";
-    renderApp();
+
+    // renderApp() 대신 필요한 부분만 갱신 (탭 위치 유지)
+    // 현재 책 목록 UI 갱신
+    renderCurrentBooksList();
+
+    // 멤버 관리 — 시즌 ID가 새로 생겼을 수 있으므로 즉시 갱신
+    await loadMemberManager();
   }
 
   async function addAdminUser() {
