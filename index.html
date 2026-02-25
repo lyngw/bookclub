@@ -565,6 +565,97 @@
     }
     #unreadBanner .banner-close:hover{ opacity: 1; }
 
+    /* ====== Rank ====== */
+    .rank-badge{
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .78rem;
+      font-weight: 700;
+      padding: .2rem .65rem;
+      border-radius: 20px;
+      letter-spacing: .01em;
+      white-space: nowrap;
+    }
+    .rank-seed   { background: #f0fce8; color: #4a7c3f; border: 1px solid #c1e6a8; }
+    .rank-reader { background: #e8f0fd; color: #2c5fa8; border: 1px solid #a8c4f5; }
+    .rank-hot    { background: #fff3e8; color: #b84f10; border: 1px solid #f5c5a0; }
+    .rank-master { background: #fdf5e8; color: #9a6a0a; border: 1px solid #f0d080; }
+    .rank-legend { background: #f5e8fd; color: #7a2fa8; border: 1px solid #d4a8f5; }
+
+    /* 프로필 등급 카드 */
+    .rank-card{
+      margin-top: 1.2rem;
+      padding: 1rem 1.1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+    }
+    .rank-card-title{
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: .55rem;
+      letter-spacing: .03em;
+    }
+    .rank-main{
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+    .rank-emoji{ font-size: 2rem; line-height: 1; }
+    .rank-info-name{ font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+    .rank-info-sub { font-size: .78rem; color: var(--text-muted); margin-top: .1rem; }
+
+    .rank-stats{
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .4rem;
+      margin-bottom: .75rem;
+    }
+    .rank-stat{
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: .5rem .4rem;
+      text-align: center;
+    }
+    .rank-stat-val{ font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+    .rank-stat-lbl{ font-size: .68rem; color: var(--text-muted); margin-top: .1rem; }
+
+    .rank-progress-wrap{ margin-top: .2rem; }
+    .rank-progress-label{
+      display: flex;
+      justify-content: space-between;
+      font-size: .74rem;
+      color: var(--text-muted);
+      margin-bottom: .3rem;
+    }
+    .rank-progress-bar{
+      height: 6px;
+      border-radius: 4px;
+      background: var(--border-light);
+      overflow: hidden;
+    }
+    .rank-progress-fill{
+      height: 100%;
+      border-radius: 4px;
+      background: var(--accent);
+      transition: width .6s ease;
+    }
+
+    /* 클럽 기록 카드 내 작은 등급 뱃지 */
+    .log-rank{ margin-left: .3rem; vertical-align: middle; }
+
+    @media (prefers-color-scheme: dark){
+      .rank-seed   { background: rgba(74,124,63,.15);  color: #7ec870; border-color: rgba(74,124,63,.3); }
+      .rank-reader { background: rgba(44,95,168,.15);  color: #7aaaf5; border-color: rgba(44,95,168,.3); }
+      .rank-hot    { background: rgba(184,79,16,.15);  color: #f5a070; border-color: rgba(184,79,16,.3); }
+      .rank-master { background: rgba(154,106,10,.15); color: #f0c84a; border-color: rgba(154,106,10,.3); }
+      .rank-legend { background: rgba(122,47,168,.15); color: #d47af5; border-color: rgba(122,47,168,.3); }
+    }
+
     @media (prefers-color-scheme: dark){
       #unreadBanner:hover{ background: rgba(212,137,106,.25); }
     }
@@ -967,6 +1058,7 @@
       tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
       sections.forEach(s => s.classList.toggle("section-hidden", s.dataset.section !== name));
 
+      if (name === "profile")   loadMyRank();
       if (name === "my-logs")   loadMyLogs();
       if (name === "club-logs") loadClubLogs();
       if (name === "archive")   loadArchivedBooks();
@@ -1048,6 +1140,9 @@
           <input id="nicknameInput" type="text" placeholder="예: 내곁에서재" />
           <button class="primary" id="saveNicknameBtn">닉네임 저장</button>
         <div class="muted" id="nicknameStatus"></div>
+        <div class="rank-card" id="rankCard">
+          <div class="muted">등급 불러오는 중...</div>
+        </div>
       </section>
 
       <section class="card" data-section="today" id="todaySection">
@@ -1462,7 +1557,7 @@
     const search = ($("clubLogSearch")?.value || "").trim();
     const bookFilter = clubLogBookFilter;
 
-    const nameMap = await loadProfilesMap();
+    const [nameMap, rankMap] = await Promise.all([loadProfilesMap(), loadRankMap()]);
 
     const { data, error } = await applyLogQuery(
       supabase.from("reading_logs").select("*"),
@@ -1481,7 +1576,7 @@
     }
 
     listEl.innerHTML = "";
-    data.forEach(row => listEl.appendChild(renderLogCard(row, { scope: "club", nameMap })));
+    data.forEach(row => listEl.appendChild(renderLogCard(row, { scope: "club", nameMap, rankMap })));
   }
 
   function renderLogCard(row, opts={}) {
@@ -1489,6 +1584,7 @@
     div.className = "log-item";
 
     const nameMap = opts.nameMap || {};
+    const rankMap = opts.rankMap || {};
     const who = (row.user_id === sessionUser.id) ? "나" : (nameMap[row.user_id] || "멤버");
     const showBookTitle = currentBooks.length > 1 || opts.isArchive;
     const bookLabel = showBookTitle ? ` · ${row.book_title}` : "";
@@ -1498,12 +1594,18 @@
     const isArchive = opts.isArchive || false;
     const canEdit = row.user_id === sessionUser.id && !isArchive;
 
+    // 등급 뱃지 (클럽 기록에서만 표시, 본인 제외)
+    const rank = rankMap[row.user_id];
+    const rankBadgeHtml = (rank && row.user_id !== sessionUser.id)
+      ? `<span class="rank-badge ${rank.cssClass} log-rank">${rank.emoji} ${rank.name}</span>`
+      : "";
+
     const preview = keypoints || row.quote || "";
     const previewHtml = safeHtmlWithBreaks(preview);
 
     div.innerHTML = `
       <div class="log-head">
-        <span>${escapeHtml(headLeft)}${canEdit ? ` <a href="#" class="edit-link" data-act="edit">수정</a>` : ''}</span>
+        <span>${escapeHtml(headLeft)}${rankBadgeHtml}${canEdit ? ` <a href="#" class="edit-link" data-act="edit">수정</a>` : ''}</span>
         <span class="pill${isArchive ? ' archive' : ''}">${escapeHtml(section)}</span>
       </div>
       <div class="log-mainline" data-act="details" style="cursor:pointer;">${previewHtml || `<span class="muted">(내용 없음)</span>`}</div>
@@ -1520,6 +1622,154 @@
     }
 
     return div;
+  }
+
+  // ====== RANK SYSTEM ======
+
+  const RANKS = [
+    {
+      key: "legend", emoji: "👑", name: "레전드",
+      cssClass: "rank-legend",
+      desc: "전설적인 독서가",
+      cond: { logs: 100, comments: 50, days: 30 }
+    },
+    {
+      key: "master", emoji: "⭐", name: "북마스터",
+      cssClass: "rank-master",
+      desc: "독서의 달인",
+      cond: { logs: 50, comments: 20, days: 0 }
+    },
+    {
+      key: "hot", emoji: "🔥", name: "열독자",
+      cssClass: "rank-hot",
+      desc: "꾸준한 독서 습관의 소유자",
+      cond: { logs: 20, comments: 5, days: 0 }
+    },
+    {
+      key: "reader", emoji: "📖", name: "독서가",
+      cssClass: "rank-reader",
+      desc: "독서를 즐기는 멤버",
+      cond: { logs: 5, comments: 0, days: 0 }
+    },
+    {
+      key: "seed", emoji: "🌱", name: "새싹",
+      cssClass: "rank-seed",
+      desc: "독서 여정을 시작한 멤버",
+      cond: { logs: 0, comments: 0, days: 0 }
+    }
+  ];
+
+  // 다음 등급까지의 진행률 계산
+  function calcRank(logs, comments, activeDays) {
+    for (let i = 0; i < RANKS.length; i++) {
+      const r = RANKS[i];
+      const c = r.cond;
+      if (logs >= c.logs && comments >= c.comments && activeDays >= c.days) {
+        const current = r;
+        const next = RANKS[i - 1] || null; // 상위 등급
+        let progress = 100;
+        let progressLabel = "";
+        if (next) {
+          const nc = next.cond;
+          // 로그, 댓글, 일수 중 가장 낮은 달성률
+          const rates = [];
+          if (nc.logs > 0)     rates.push(Math.min(logs / nc.logs, 1));
+          if (nc.comments > 0) rates.push(Math.min(comments / nc.comments, 1));
+          if (nc.days > 0)     rates.push(Math.min(activeDays / nc.days, 1));
+          progress = rates.length ? Math.round(Math.min(...rates) * 100) : 100;
+          progressLabel = `다음 등급 ${next.emoji} ${next.name}까지 ${progress}%`;
+        } else {
+          progressLabel = "최고 등급 달성! 🎉";
+        }
+        return { current, next, progress, progressLabel };
+      }
+    }
+    return { current: RANKS[RANKS.length - 1], next: RANKS[RANKS.length - 2], progress: 0, progressLabel: "" };
+  }
+
+  // 유저 활동 통계 조회
+  async function fetchUserStats(userId) {
+    const [logsRes, commentsRes] = await Promise.all([
+      supabase.from("reading_logs").select("date", { count: "exact" }).eq("user_id", userId).eq("archived", false),
+      supabase.from("comments").select("id",       { count: "exact" }).eq("user_id", userId)
+    ]);
+
+    const logCount     = logsRes.count || 0;
+    const commentCount = commentsRes.count || 0;
+
+    // 활동 기간 = 첫 기록일부터 오늘까지 일수
+    let activeDays = 0;
+    if (logsRes.data && logsRes.data.length > 0) {
+      const dates = logsRes.data.map(r => new Date(r.date)).sort((a, b) => a - b);
+      const first = dates[0];
+      const today = new Date();
+      activeDays = Math.floor((today - first) / (1000 * 60 * 60 * 24));
+    }
+
+    return { logCount, commentCount, activeDays };
+  }
+
+  // 프로필 탭 — 내 등급 로드 및 렌더링
+  async function loadMyRank() {
+    const el = $("rankCard");
+    if (!el) return;
+    el.innerHTML = `<div class="muted">등급 불러오는 중...</div>`;
+
+    const { logCount, commentCount, activeDays } = await fetchUserStats(sessionUser.id);
+    const { current, next, progress, progressLabel } = calcRank(logCount, commentCount, activeDays);
+
+    el.innerHTML = `
+      <div class="rank-card-title">나의 독서 등급</div>
+      <div class="rank-main">
+        <div class="rank-emoji">${current.emoji}</div>
+        <div>
+          <div class="rank-info-name">
+            <span class="rank-badge ${current.cssClass}">${current.emoji} ${current.name}</span>
+          </div>
+          <div class="rank-info-sub">${current.desc}</div>
+        </div>
+      </div>
+      <div class="rank-stats">
+        <div class="rank-stat">
+          <div class="rank-stat-val">${logCount}</div>
+          <div class="rank-stat-lbl">📝 기록 수</div>
+        </div>
+        <div class="rank-stat">
+          <div class="rank-stat-val">${commentCount}</div>
+          <div class="rank-stat-lbl">💬 댓글 수</div>
+        </div>
+        <div class="rank-stat">
+          <div class="rank-stat-val">${activeDays}</div>
+          <div class="rank-stat-lbl">📅 활동 일수</div>
+        </div>
+      </div>
+      ${next ? `
+      <div class="rank-progress-wrap">
+        <div class="rank-progress-label">
+          <span>${progressLabel}</span>
+          <span>${progress}%</span>
+        </div>
+        <div class="rank-progress-bar">
+          <div class="rank-progress-fill" style="width:${progress}%"></div>
+        </div>
+      </div>` : `<div class="muted" style="font-size:.8rem;text-align:center;">${progressLabel}</div>`}
+    `;
+  }
+
+  // 전체 멤버 등급 맵 (클럽 기록 카드에 표시용)
+  async function loadRankMap() {
+    const map = {};
+    try {
+      const { data: profiles } = await supabase.from("profiles").select("id");
+      if (!profiles) return map;
+
+      await Promise.all(profiles.map(async (p) => {
+        const stats = await fetchUserStats(p.id);
+        const { current } = calcRank(stats.logCount, stats.commentCount, stats.activeDays);
+        map[p.id] = current;
+      }));
+    } catch (e) { console.warn("loadRankMap error:", e); }
+    return map;
   }
 
   // ====== NOTIFICATIONS ======
