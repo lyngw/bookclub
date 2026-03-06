@@ -869,6 +869,114 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .bio-card-actions{
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin-top: .75rem;
+      padding-top: .6rem;
+      border-top: 1px dashed var(--border-light);
+    }
+    .bio-like-btn{
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+      font-size: .8rem;
+      background: none;
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      padding: .22rem .65rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .bio-like-btn:hover{ background: #fee; border-color: #f5a; color: #e0366c; }
+    .bio-like-btn.liked{ background: #fff0f5; border-color: #f7a; color: #e0366c; font-weight: 700; }
+    .bio-comment-toggle{
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+      font-size: .8rem;
+      background: none;
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      padding: .22rem .65rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: background .15s, color .15s;
+    }
+    .bio-comment-toggle:hover{ background: var(--bg-tertiary, #f4f4f5); color: var(--text-primary); }
+    .bio-comment-toggle.open{ background: var(--bg-tertiary, #f4f4f5); color: var(--text-primary); }
+    .bio-comment-area{
+      margin-top: .6rem;
+      padding-top: .6rem;
+      border-top: 1px dashed var(--border-light);
+      display: none;
+    }
+    .bio-comment-area.open{ display: block; }
+    .bio-comment-list{ display: flex; flex-direction: column; gap: .4rem; margin-bottom: .5rem; }
+    .bio-comment-item{
+      background: var(--bg-card, #fff);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: .45rem .7rem;
+      font-size: .8rem;
+    }
+    .bio-comment-meta{
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-bottom: .18rem;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .bio-comment-author{ font-weight: 600; color: var(--text-secondary); }
+    .bio-comment-body{ color: var(--text-primary); white-space: pre-wrap; line-height: 1.45; }
+    .bio-comment-del{
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: .7rem;
+      color: var(--text-muted);
+      padding: 0;
+      opacity: .6;
+    }
+    .bio-comment-del:hover{ opacity: 1; color: #e74c3c; }
+    .bio-comment-form{ display: flex; gap: .4rem; align-items: flex-end; }
+    .bio-comment-form textarea{
+      flex: 1;
+      min-height: 44px;
+      resize: none;
+      font-size: .8rem;
+      border-radius: 10px;
+      padding: .4rem .6rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: inherit;
+      line-height: 1.4;
+    }
+    .bio-comment-form textarea:focus{
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    .bio-comment-submit{
+      border: none;
+      border-radius: 10px;
+      padding: .4rem .7rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .2s;
+      flex-shrink: 0;
+    }
+    .bio-comment-submit:hover{ background: var(--accent-hover); }
+    .bio-comment-submit:disabled{ opacity: .55; cursor: default; }
     .member-card-actions{
       display: flex;
       gap: .5rem;
@@ -2971,29 +3079,241 @@
     const bioSection = $("memberBioSection");
     if (!bioSection) return;
 
-    const { data, error } = await supabase
+    // 1) bio 있는 멤버 조회
+    const { data: profiles, error } = await supabase
       .from("profiles")
       .select("id, display_name, bio")
       .not("bio", "is", null)
       .neq("bio", "")
       .order("display_name");
 
-    if (error || !data || data.length === 0) {
+    if (error || !profiles || profiles.length === 0) {
       bioSection.innerHTML = "";
       return;
     }
 
+    const targetIds = profiles.map(p => p.id);
+
+    // 2) 좋아요 & 댓글 수 배치 조회 (병렬)
+    const [likesRes, commentsRes, myLikesRes] = await Promise.all([
+      supabase.from("bio_likes")
+        .select("target_user_id")
+        .in("target_user_id", targetIds),
+      supabase.from("bio_comments")
+        .select("target_user_id")
+        .in("target_user_id", targetIds),
+      sessionUser
+        ? supabase.from("bio_likes")
+            .select("target_user_id")
+            .eq("user_id", sessionUser.id)
+            .in("target_user_id", targetIds)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    // 집계
+    const likeCountMap = {};
+    const commentCountMap = {};
+    const myLikedSet = new Set();
+
+    (likesRes.data || []).forEach(r => {
+      likeCountMap[r.target_user_id] = (likeCountMap[r.target_user_id] || 0) + 1;
+    });
+    (commentsRes.data || []).forEach(r => {
+      commentCountMap[r.target_user_id] = (commentCountMap[r.target_user_id] || 0) + 1;
+    });
+    (myLikesRes.data || []).forEach(r => myLikedSet.add(r.target_user_id));
+
+    // 3) 섹션 헤더 + 그리드 컨테이너
     bioSection.innerHTML = `
       <div class="subtitle" style="margin-bottom:.6rem;font-weight:600;">멤버 소개</div>
-      <div class="bio-cards-grid">
-        ${data.map(p => `
-          <div class="bio-card">
-            <div class="bio-card-name">${escapeHtml(p.display_name || "멤버")}</div>
-            <div class="bio-card-text">${escapeHtml(p.bio).replace(/\n/g, "<br>")}</div>
-          </div>
-        `).join("")}
-      </div>
+      <div class="bio-cards-grid" id="bioCardsGrid"></div>
     `;
+    const grid = $("bioCardsGrid");
+
+    // 4) 카드 렌더링
+    profiles.forEach(p => {
+      const tid = p.id;
+      const isMine = sessionUser?.id === tid;
+      const likeCount = likeCountMap[tid] || 0;
+      const commentCount = commentCountMap[tid] || 0;
+      const liked = myLikedSet.has(tid);
+
+      const card = document.createElement("div");
+      card.className = "bio-card";
+      card.dataset.tid = tid;
+      card.innerHTML = `
+        <div class="bio-card-name">${escapeHtml(p.display_name || "멤버")}</div>
+        <div class="bio-card-text">${escapeHtml(p.bio).replace(/\n/g, "<br>")}</div>
+        <div class="bio-card-actions">
+          <button class="bio-like-btn${liked ? " liked" : ""}" data-tid="${tid}">
+            ${liked ? "❤️" : "🤍"} <span class="bio-like-count">${likeCount}</span>
+          </button>
+          <button class="bio-comment-toggle" data-tid="${tid}">
+            💬 <span class="bio-cmt-count">${commentCount}</span>
+          </button>
+        </div>
+        <div class="bio-comment-area" id="bioCommentArea-${tid}">
+          <div class="bio-comment-list" id="bioCommentList-${tid}">
+            <div class="comment-empty">불러오는 중...</div>
+          </div>
+          <div class="bio-comment-form">
+            <textarea id="bioCmtInput-${tid}" placeholder="댓글을 입력하세요… (Ctrl+Enter로 등록)" rows="2"></textarea>
+            <button class="bio-comment-submit" id="bioCmtSubmit-${tid}">등록</button>
+          </div>
+        </div>
+      `;
+
+      // 좋아요 토글 (본인 bio는 좋아요 불가)
+      const likeBtn = card.querySelector(".bio-like-btn");
+      if (isMine) {
+        likeBtn.disabled = true;
+        likeBtn.title = "내 소개에는 좋아요를 누를 수 없어요";
+        likeBtn.style.opacity = ".45";
+        likeBtn.style.cursor = "default";
+      } else {
+        likeBtn.onclick = () => toggleBioLike(tid, card);
+      }
+
+      // 댓글 토글
+      const commentToggle = card.querySelector(".bio-comment-toggle");
+      const commentArea = card.querySelector(`#bioCommentArea-${tid}`);
+      commentToggle.onclick = () => {
+        const isOpen = commentArea.classList.toggle("open");
+        commentToggle.classList.toggle("open", isOpen);
+        if (isOpen) loadBioComments(tid);
+      };
+
+      // 댓글 등록 버튼
+      const submitBtn = card.querySelector(`#bioCmtSubmit-${tid}`);
+      const textarea  = card.querySelector(`#bioCmtInput-${tid}`);
+      submitBtn.onclick = () => submitBioComment(tid, card);
+      textarea.addEventListener("keydown", e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault();
+          submitBioComment(tid, card);
+        }
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ─── 좋아요 토글 ───
+  async function toggleBioLike(tid, card) {
+    const likeBtn   = card.querySelector(".bio-like-btn");
+    const likeCount = card.querySelector(".bio-like-count");
+    const isLiked   = likeBtn.classList.contains("liked");
+
+    likeBtn.disabled = true;
+
+    if (isLiked) {
+      const { error } = await supabase.from("bio_likes")
+        .delete()
+        .eq("user_id", sessionUser.id)
+        .eq("target_user_id", tid);
+      if (!error) {
+        likeBtn.classList.remove("liked");
+        likeBtn.innerHTML = `🤍 <span class="bio-like-count">${Math.max(0, parseInt(likeCount.textContent) - 1)}</span>`;
+      }
+    } else {
+      const { error } = await supabase.from("bio_likes")
+        .insert({ user_id: sessionUser.id, target_user_id: tid });
+      if (!error) {
+        likeBtn.classList.add("liked");
+        likeBtn.innerHTML = `❤️ <span class="bio-like-count">${parseInt(likeCount.textContent) + 1}</span>`;
+      }
+    }
+    likeBtn.disabled = false;
+  }
+
+  // ─── 댓글 로드 ───
+  async function loadBioComments(tid) {
+    const listEl = $(`bioCommentList-${tid}`);
+    if (!listEl) return;
+    listEl.innerHTML = `<div class="comment-empty">불러오는 중...</div>`;
+
+    const nameMap = await loadProfilesMap();
+    const { data, error } = await supabase
+      .from("bio_comments")
+      .select("*")
+      .eq("target_user_id", tid)
+      .order("created_at", { ascending: true });
+
+    if (error) { listEl.innerHTML = `<div class="comment-empty">댓글을 불러오지 못했습니다.</div>`; return; }
+    if (!data || data.length === 0) {
+      listEl.innerHTML = `<div class="comment-empty">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</div>`;
+      return;
+    }
+
+    listEl.innerHTML = "";
+    data.forEach(c => {
+      const isMine = c.user_id === sessionUser?.id;
+      const authorName = escapeHtml(nameMap[c.user_id] || "멤버");
+      const timeStr = new Date(c.created_at).toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" });
+      const div = document.createElement("div");
+      div.className = "bio-comment-item";
+      div.innerHTML = `
+        <div class="bio-comment-meta">
+          <span class="bio-comment-author">${authorName}</span>
+          <span>${timeStr}</span>
+          ${isMine ? `<button class="bio-comment-del" data-cid="${c.id}" data-tid="${tid}">✕ 삭제</button>` : ""}
+        </div>
+        <div class="bio-comment-body">${safeHtmlWithBreaks(c.content)}</div>
+      `;
+      if (isMine) {
+        div.querySelector(".bio-comment-del").onclick = (e) => {
+          const { cid, tid: t } = e.currentTarget.dataset;
+          deleteBioComment(cid, t);
+        };
+      }
+      listEl.appendChild(div);
+    });
+  }
+
+  // ─── 댓글 등록 ───
+  async function submitBioComment(tid, card) {
+    const textarea  = card.querySelector(`#bioCmtInput-${tid}`);
+    const submitBtn = card.querySelector(`#bioCmtSubmit-${tid}`);
+    const content = (textarea?.value || "").trim();
+    if (!content) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "저장 중...";
+
+    const { error } = await supabase.from("bio_comments").insert({
+      user_id: sessionUser.id,
+      target_user_id: tid,
+      content
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = "등록";
+
+    if (error) { alert("댓글 저장에 실패했습니다."); return; }
+
+    textarea.value = "";
+    // 댓글 수 카운터 업데이트
+    const countEl = card.querySelector(".bio-cmt-count");
+    if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+    await loadBioComments(tid);
+  }
+
+  // ─── 댓글 삭제 ───
+  async function deleteBioComment(commentId, tid) {
+    if (!confirm("댓글을 삭제하시겠습니까?")) return;
+    const { error } = await supabase.from("bio_comments")
+      .delete()
+      .eq("id", commentId)
+      .eq("user_id", sessionUser.id);
+    if (error) { alert("삭제에 실패했습니다."); return; }
+
+    // 카운터 업데이트
+    const card = document.querySelector(`.bio-card[data-tid="${tid}"]`);
+    if (card) {
+      const countEl = card.querySelector(".bio-cmt-count");
+      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+    }
+    await loadBioComments(tid);
   }
 
   // ====== ADMIN ======
