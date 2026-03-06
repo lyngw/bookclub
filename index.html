@@ -834,6 +834,41 @@
       background: var(--bg-secondary);
       color: var(--text-muted);
     }
+    .member-card-bio{
+      margin-bottom: .7rem;
+      padding: .6rem .7rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border-light);
+    }
+    .member-card-bio textarea{
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    .bio-cards-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .8rem;
+    }
+    .bio-card{
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: .85rem 1rem;
+    }
+    .bio-card-name{
+      font-weight: 700;
+      font-size: .9rem;
+      margin-bottom: .4rem;
+      color: var(--text-primary);
+    }
+    .bio-card-text{
+      font-size: .82rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     .member-card-actions{
       display: flex;
       gap: .5rem;
@@ -1485,6 +1520,27 @@
     }
   }
 
+  async function saveBio(user) {
+    const ta = $("bioInput");
+    const statusEl = $("bioStatus");
+    if (!user || !ta) return;
+    const bioText = ta.value.trim();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ bio: bioText || null })
+      .eq("id", user.id);
+    if (error) {
+      console.error("자기소개 저장 오류:", error);
+      if (statusEl) statusEl.textContent = "저장 중 오류가 발생했습니다.";
+      return;
+    }
+    if (statusEl) statusEl.textContent = "자기소개가 저장되었습니다.";
+    // 대시보드 갱신
+    if (document.querySelector('.tab[data-tab="dashboard"]')?.classList.contains("active")) {
+      await loadDashboard();
+    }
+  }
+
   async function saveNickname(user) {
     const input = $("nicknameInput");
     const statusEl = $("nicknameStatus");
@@ -1535,6 +1591,13 @@
         <div class="muted" id="nicknameStatus"></div>
         <div class="rank-card" id="rankCard">
           <div class="muted">등급 불러오는 중...</div>
+        </div>
+        <div style="margin-top:1.2rem;">
+          <label>자기소개</label>
+          <div class="subtitle" style="margin-bottom:.5rem;">대시보드에 표시되는 나의 소개입니다.</div>
+          <textarea id="bioInput" placeholder="독서 클럽에서의 나를 소개해 보세요." style="min-height:90px;"></textarea>
+          <button class="primary" id="saveBioBtn" style="margin-top:.5rem;">자기소개 저장</button>
+          <div class="muted" id="bioStatus"></div>
         </div>
       </section>
 
@@ -1648,6 +1711,7 @@
           <span id="seasonLabel" class="muted"></span>
         </div>
         <div id="dashboardContent" class="muted">데이터를 불러오는 중...</div>
+        <div id="memberBioSection" style="margin-top:1.4rem;"></div>
       </section>
 
       ${isAdmin ? `
@@ -1722,6 +1786,15 @@
     if (nickInput) nickInput.value = profileName || "";
     const saveNickBtn = document.getElementById("saveNicknameBtn");
     if (saveNickBtn) saveNickBtn.onclick = () => saveNickname(sessionUser);
+
+    // bio 초기값 로드
+    const bioInputEl = document.getElementById("bioInput");
+    const saveBioBtn = document.getElementById("saveBioBtn");
+    if (saveBioBtn) saveBioBtn.onclick = () => saveBio(sessionUser);
+    if (bioInputEl && sessionUser) {
+      supabase.from("profiles").select("bio").eq("id", sessionUser.id).single()
+        .then(({ data }) => { if (bioInputEl && data?.bio) bioInputEl.value = data.bio; });
+    }
 
     // season hints
     const seasonHint = $("seasonHint");
@@ -2885,10 +2958,42 @@
           ${top.length ? `<ul class="mini-list">${top.map(x=>`<li>${escapeHtml(x.name)} – ${x.c}회</li>`).join("")}</ul>` : `<div class="muted">데이터가 충분하지 않습니다.</div>`}
         </div>
       `;
+
+      // 멤버 소개 카드
+      await loadMemberBios(nameMap);
     } catch (e) {
       console.error("loadDashboard exception:", e);
       container.textContent = "대시보드 데이터를 불러오지 못했습니다.";
     }
+  }
+
+  async function loadMemberBios(nameMap) {
+    const bioSection = $("memberBioSection");
+    if (!bioSection) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, display_name, bio")
+      .not("bio", "is", null)
+      .neq("bio", "")
+      .order("display_name");
+
+    if (error || !data || data.length === 0) {
+      bioSection.innerHTML = "";
+      return;
+    }
+
+    bioSection.innerHTML = `
+      <div class="subtitle" style="margin-bottom:.6rem;font-weight:600;">멤버 소개</div>
+      <div class="bio-cards-grid">
+        ${data.map(p => `
+          <div class="bio-card">
+            <div class="bio-card-name">${escapeHtml(p.display_name || "멤버")}</div>
+            <div class="bio-card-text">${escapeHtml(p.bio).replace(/\n/g, "<br>")}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
   // ====== ADMIN ======
@@ -3048,7 +3153,7 @@
       // 병렬 조회: 프로필, 시즌 참여, 모든 시즌 목록(기록 기준)
       const [profilesRes, seasonMembersRes, allLogsRes] = await Promise.all([
         supabase.from("profiles")
-          .select("id, display_name, rank_override, suspended_at, created_at")
+          .select("id, display_name, rank_override, suspended_at, created_at, bio")
           .order("display_name"),
         seasonId
           ? supabase.from("season_members").select("user_id, is_active").eq("season_id", seasonId)
@@ -3166,6 +3271,12 @@
           </div>
           <div style="font-size:.74rem;color:var(--text-muted);margin-bottom:.4rem;">참여 시즌</div>
           <div class="member-season-list">${seasonChips}</div>
+          <div class="member-card-bio">
+            <label style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:.3rem;">자기소개</label>
+            <textarea class="member-bio-input" data-uid="${p.id}" placeholder="이 멤버의 자기소개를 입력하세요." style="min-height:70px;width:100%;font-size:.82rem;">${escapeHtml(p.bio || "")}</textarea>
+            <button class="action-btn" data-action="save-bio" data-uid="${p.id}" style="margin-top:.3rem;">소개 저장</button>
+            <span class="member-bio-status" data-uid="${p.id}" style="font-size:.74rem;color:var(--text-muted);margin-left:.5rem;"></span>
+          </div>
           <div class="member-card-actions">
             <select class="rank-select" data-uid="${p.id}" title="등급 변경">
               ${rankOptions}
@@ -3198,6 +3309,18 @@
         if (suspendBtn) suspendBtn.onclick = () => suspendMember(p.id, p.display_name || "멤버");
         const unsuspendBtn = card.querySelector('[data-action="unsuspend"]');
         if (unsuspendBtn) unsuspendBtn.onclick = () => unsuspendMember(p.id, p.display_name || "멤버");
+
+        const saveBioAdminBtn = card.querySelector('[data-action="save-bio"]');
+        if (saveBioAdminBtn) saveBioAdminBtn.onclick = async () => {
+          const ta = card.querySelector(`.member-bio-input[data-uid="${p.id}"]`);
+          const st = card.querySelector(`.member-bio-status[data-uid="${p.id}"]`);
+          if (!ta) return;
+          const { error } = await supabase.from("profiles")
+            .update({ bio: ta.value.trim() || null })
+            .eq("id", p.id);
+          if (st) st.textContent = error ? "저장 실패" : "저장됨 ✓";
+          if (!error) setTimeout(() => { if (st) st.textContent = ""; }, 2000);
+        };
 
         listEl.appendChild(card);
       });
