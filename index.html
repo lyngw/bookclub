@@ -379,8 +379,10 @@
 
     .modal{
       width: min(680px, 100%);
-      max-height: calc(100vh - 8vh - 2rem - env(safe-area-inset-bottom));
-      overflow: auto;
+      max-height: calc(100dvh - 8vh - 2rem - env(safe-area-inset-bottom));
+      max-height: calc(100vh  - 8vh - 2rem - env(safe-area-inset-bottom)); /* fallback */
+      overflow-y: auto;
+      overflow-x: hidden;
       background: var(--bg-card);
       border-radius: 24px;
       border: 1px solid var(--border-light);
@@ -413,7 +415,7 @@
     }
     .modal-close:hover{ color: var(--text-primary); }
 
-    .modal-body{ padding: 1rem 1.25rem 1.25rem; }
+    .modal-body{ padding: 1rem 1.25rem 3rem; }
 
     .kv{
       display: grid;
@@ -475,7 +477,7 @@
       transition: opacity .15s;
     }
     .comment-delete-btn:hover{ opacity: 1; color: #e74c3c; }
-    .comment-form{ display: flex; gap: .5rem; align-items: flex-end; margin-top: .3rem; }
+    .comment-form{ display: flex; gap: .5rem; align-items: flex-end; margin-top: .3rem; padding-bottom: .5rem; }
     .comment-form textarea{
       flex: 1;
       min-height: 52px;
