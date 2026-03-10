@@ -415,7 +415,7 @@
     }
     .modal-close:hover{ color: var(--text-primary); }
 
-    .modal-body{ padding: 1rem 1.25rem 3rem; }
+    .modal-body{ padding: 1rem 1.25rem 45vh; }
 
     .kv{
       display: grid;
@@ -2745,6 +2745,12 @@
           e.preventDefault();
           submitComment(logId);
         }
+      });
+      // 모바일 키보드가 올라올 때 댓글창이 보이도록 스크롤
+      textarea.addEventListener("focus", () => {
+        setTimeout(() => {
+          textarea.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 350);
       });
     }
   }
