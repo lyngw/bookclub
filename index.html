@@ -418,15 +418,15 @@
     .modal-body{ padding: 1rem 1.25rem 1.25rem; }
 
     .kv{
-      display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: .8rem;
-      padding: .65rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      padding: .75rem 0;
       border-bottom: 1px dashed var(--border-light);
     }
     .kv:last-child{ border-bottom: none; }
-    .kv .k{ font-size: .82rem; color: var(--text-muted); font-weight: 500; }
-    .kv .v{ font-size: .92rem; white-space: normal; color: var(--text-primary); line-height: 1.5; }
+    .kv .k{ font-size: .78rem; color: var(--text-muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+    .kv .v{ font-size: .95rem; white-space: pre-wrap; color: var(--text-primary); line-height: 1.65; }
 
     .modal-footer{ padding: 1rem 1.25rem 1.25rem; border-top: 1px solid var(--border-light); }
 
